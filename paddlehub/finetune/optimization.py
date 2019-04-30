@@ -19,6 +19,8 @@ from __future__ import print_function
 
 import numpy as np
 import paddle.fluid as fluid
+import paddle.fluid.layers.learning_rate_scheduler as lr_scheduler
+from paddle.fluid.layers import control_flow
 
 
 def adam_weight_decay_optimization(loss,
@@ -76,3 +78,41 @@ def adam_weight_decay_optimization(loss,
                 fluid.layers.assign(output=param, input=updated_param)
 
     return scheduled_lr
+
+
+def slanted_triangle_learning_rate_optimization(
+        loss, cut_step, max_train_step, max_learning_rate, ratio, main_program):
+    scheduled_lr = slanted_triangle_learning_rate_decay(
+        cut_step, max_train_step, max_learning_rate, ratio, main_program)
+    optimizer = fluid.optimizer.Adam(learning_rate=scheduled_lr)
+    optimizer.minimize(loss)
+    q
+    return scheduled_lr
+
+
+def slanted_triangle_learning_rate_decay(
+        cut_step, max_train_step, max_learning_rate, ratio, main_program):
+
+    with main_program._lr_schedule_guard():
+        global_step = lr_scheduler._decay_step_counter()
+
+        lr = fluid.layers.create_global_var(
+            shape=[1],
+            value=0.0,
+            dtype='float32',
+            persistable=True,
+            name="learning_rate")
+
+        with control_flow.Switch() as switch:
+            with switch.case(global_step <= cut_step):
+                pct = global_step / cut_step
+                decayed_lr = max_learning_rate[0] * (1 + pct *
+                                                     (ratio[0] - 1)) / ratio[0]
+                fluid.layers.assign(decayed_lr, lr)
+            with switch.default():
+                pct = 1 - (global_step - cut_step) / (max_train_step - cut_step)
+                decayed_lr = max_learning_rate[0] * (1 + pct *
+                                                     (ratio[0] - 1)) / ratio[0]
+                fluid.layers.assign(decayed_lr, lr)
+
+        return lr

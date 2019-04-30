@@ -81,6 +81,10 @@ if __name__ == '__main__':
         lr_scheduler="linear_decay",
     )
 
+    # Slanted Triangle Learning Rate FineTune Strategy
+    strategy = hub.SlantedTriangleLRFineTuneStrategy(
+        ratio=32, cut_fraction=0.1, learning_rate=args.learning_rate)
+
     # Setup runing config for PaddleHub Finetune API
     config = hub.RunConfig(
         use_cuda=args.use_gpu,

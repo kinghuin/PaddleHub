@@ -22,6 +22,7 @@ import multiprocessing
 import paddle.fluid as fluid
 
 from paddlehub.finetune.optimization import adam_weight_decay_optimization
+from paddlehub.finetune.optimization import slanted_triangle_learning_rate_optimization
 from paddlehub.finetune.regularizer import L2SPDecayRegularizer
 
 
@@ -37,6 +38,32 @@ def get_pretrained_parameter(main_program, start_program):
                 pretrained_parameters.append(var)
 
     return pretrained_parameters
+
+
+def get_optimizer(optimizer_name, learning_rate):
+    if optimizer_name.lower() == "sgd":
+        optimizer = fluid.optimizer.SGD(learning_rate=learning_rate)
+    elif optimizer_name.lower() == "adagrad":
+        optimizer = fluid.optimizer.Adagrad(learning_rate=learning_rate)
+    elif optimizer_name.lower() == "adamax":
+        optimizer = fluid.optimizer.Adamax(learning_rate=learning_rate)
+    elif optimizer_name.lower() == "decayedadagrad":
+        optimizer = fluid.optimizer.DecayedAdagrad(learning_rate=learning_rate)
+    elif optimizer_name.lower() == "ftrl":
+        optimizer = fluid.optimizer.Ftrl(learning_rate=learning_rate)
+    elif optimizer_name.lower() == "larsmomentum":
+        optimizer = fluid.optimizer.LarsMomentum(learning_rate=learning_rate)
+    elif optimizer_name.lower() == "momentum":
+        optimizer = fluid.optimizer.Momentum(learning_rate=learning_rate)
+    elif optimizer_name.lower() == "decayedadagrad":
+        optimizer = fluid.optimizer.DecayedAdagrad(learning_rate=learning_rate)
+    elif optimizer_name.lower() == "rmsprop":
+        optimizer = fluid.optimizer.RMSPropOptimizer(
+            learning_rate=learning_rate)
+    else:
+        optimizer = fluid.optimizer.Adam(learning_rate=learning_rate)
+
+    return optimizer
 
 
 class DefaultStrategy(object):
@@ -117,6 +144,12 @@ class AdamWeightDecayStrategy(DefaultStrategy):
     def execute(self, loss, main_program, data_reader, config):
         # calculate wamrup step
         dev_count = self._get_dev_count(config)
+        data_reader.data_generator(
+            batch_size=config.batch_size, phase='train', shuffle=True)
+        data_reader.data_generator(
+            batch_size=config.batch_size, phase='dev', shuffle=False)
+        data_reader.data_generator(
+            batch_size=config.batch_size, phase='test', shuffle=False)
         num_train_examples = data_reader.get_num_examples(phase='train')
         max_train_steps = config.num_epoch * num_train_examples // config.batch_size // dev_count
         warmup_steps = int(max_train_steps * self.warmup_proportion)
@@ -197,3 +230,45 @@ class L2SPFinetuneStrategy(DefaultStrategy):
             self.optimizer.minimize(loss)
         else:
             raise ValueError("DefaultFinetuneStrategy's optimizer is None")
+
+
+class SlantedTriangleLRFineTuneStrategy(DefaultStrategy):
+    def __init__(self,
+                 ratio=32,
+                 cut_fraction=0.1,
+                 learning_rate=1e-4,
+                 optimizer_name="adam"):
+        super(SlantedTriangleLRFineTuneStrategy, self).__init__(
+            learning_rate=learning_rate, optimizer_name=optimizer_name)
+        self._max_learning_rate = learning_rate,
+        self._optimizer_name = optimizer_name,
+        self._ratio = ratio,
+        self._cut_fraction = cut_fraction,
+
+    @property
+    def ratio(self):
+        return self._ratio
+
+    @property
+    def cut_fraction(self):
+        return self._cut_fraction
+
+    @property
+    def max_learning_rate(self):
+        return self._max_learning_rate
+
+    def execute(self, loss, main_program, data_reader, config):
+        data_reader.data_generator(
+            batch_size=config.batch_size, phase='train', shuffle=True)
+        data_reader.data_generator(
+            batch_size=config.batch_size, phase='dev', shuffle=False)
+        data_reader.data_generator(
+            batch_size=config.batch_size, phase='test', shuffle=False)
+        num_train_examples = data_reader.get_num_examples(phase='train')
+        max_train_step = config.num_epoch * num_train_examples // config.batch_size
+        cut_step = int(max_train_step * self.cut_fraction[0])
+        scheduled_lr = slanted_triangle_learning_rate_optimization(
+            loss, cut_step, max_train_step, self.max_learning_rate, self.ratio,
+            main_program)
+
+        return scheduled_lr

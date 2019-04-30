@@ -27,7 +27,7 @@ from visualdl import LogWriter
 from paddlehub.common.logger import logger
 from paddlehub.common.utils import mkdir
 from paddlehub.finetune.config import RunConfig
-from paddlehub.finetune.strategy import AdamWeightDecayStrategy, DefaultStrategy
+from paddlehub.finetune.strategy import AdamWeightDecayStrategy, DefaultStrategy, SlantedTriangleLRFineTuneStrategy
 from paddlehub.finetune.checkpoint import load_checkpoint, save_checkpoint
 from paddlehub.finetune.evaluate import evaluate_cls_task, evaluate_seq_label_task
 import paddlehub as hub
@@ -79,6 +79,9 @@ def _finetune_seq_label_task(task,
 
         # Select strategy
         if isinstance(config.strategy, hub.AdamWeightDecayStrategy):
+            scheduled_lr = config.strategy.execute(loss, main_program,
+                                                   data_reader, config)
+        elif isinstance(config.strategy, hub.SlantedTriangleLRFineTuneStrategy):
             scheduled_lr = config.strategy.execute(loss, main_program,
                                                    data_reader, config)
         elif isinstance(config.strategy, hub.DefaultStrategy):
@@ -194,6 +197,9 @@ def _finetune_cls_task(task, data_reader, feed_list, config=None,
 
         # select strategy
         if isinstance(config.strategy, hub.AdamWeightDecayStrategy):
+            scheduled_lr = config.strategy.execute(loss, main_program,
+                                                   data_reader, config)
+        elif isinstance(config.strategy, hub.SlantedTriangleLRFineTuneStrategy):
             scheduled_lr = config.strategy.execute(loss, main_program,
                                                    data_reader, config)
         elif isinstance(config.strategy, hub.DefaultStrategy):

@@ -46,6 +46,7 @@ from .finetune.finetune import finetune_and_eval
 from .finetune.config import RunConfig
 from .finetune.strategy import AdamWeightDecayStrategy
 from .finetune.strategy import DefaultStrategy
+from .finetune.strategy import SlantedTriangleLRFineTuneStrategy
 
 if six.PY2:
     import sys

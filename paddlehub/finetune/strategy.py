@@ -116,7 +116,7 @@ class AdamWeightDecayStrategy(DefaultStrategy):
     def __init__(self,
                  learning_rate=1e-4,
                  lr_scheduler="linear_decay",
-                 warmup_proportion=0.0,
+                 warmup_proportion=0.1,
                  weight_decay=0.01,
                  optimizer_name="adam"):
         super(AdamWeightDecayStrategy, self).__init__(

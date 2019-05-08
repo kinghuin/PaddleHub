@@ -91,9 +91,10 @@ def linear_warmup_decay(init_lr, num_warmup_steps, main_program):
             persistable=True,
             name="learning_rate")
 
-        with switch.case(global_step < num_warmup_steps):
-            decayed_lr = init_lr * global_step * 1.0 / num_warmup_steps
-            fluid.layers.assign(decayed_lr, lr)
+        with control_flow.Switch() as switch:
+            with switch.case(global_step < num_warmup_steps):
+                decayed_lr = init_lr * global_step * 1.0 / num_warmup_steps
+                fluid.layers.assign(decayed_lr, lr)
             with switch.default():
                 last_value_var = fluid.layers.fill_constant(
                     shape=[1], dtype='float32', value=float(init_lr))

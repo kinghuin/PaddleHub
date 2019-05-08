@@ -144,13 +144,7 @@ class AdamWeightDecayStrategy(DefaultStrategy):
     def execute(self, loss, main_program, data_reader, config):
         # calculate wamrup step
         dev_count = self._get_dev_count(config)
-        data_reader.data_generator(
-            batch_size=config.batch_size, phase='train', shuffle=True)
-        data_reader.data_generator(
-            batch_size=config.batch_size, phase='dev', shuffle=False)
-        data_reader.data_generator(
-            batch_size=config.batch_size, phase='test', shuffle=False)
-        num_train_examples = data_reader.get_num_examples(phase='train')
+        num_train_examples = data_reader.dataset.num_examples["train"]
         max_train_steps = config.num_epoch * num_train_examples // config.batch_size // dev_count
         warmup_steps = int(max_train_steps * self.warmup_proportion)
 
@@ -258,13 +252,7 @@ class SlantedTriangleLRFineTuneStrategy(DefaultStrategy):
         return self._max_learning_rate
 
     def execute(self, loss, main_program, data_reader, config):
-        data_reader.data_generator(
-            batch_size=config.batch_size, phase='train', shuffle=True)
-        data_reader.data_generator(
-            batch_size=config.batch_size, phase='dev', shuffle=False)
-        data_reader.data_generator(
-            batch_size=config.batch_size, phase='test', shuffle=False)
-        num_train_examples = data_reader.get_num_examples(phase='train')
+        num_train_examples = data_reader.dataset.num_examples["train"]
         max_train_step = config.num_epoch * num_train_examples // config.batch_size
         cut_step = int(max_train_step * self.cut_fraction[0])
         scheduled_lr = slanted_triangle_learning_rate_optimization(

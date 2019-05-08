@@ -38,6 +38,8 @@ class LCQMC(HubDataset):
         else:
             logger.info("Dataset {} already cached.".format(self.dataset_dir))
 
+        self.num_examples = {'train': -1, 'dev': -1, 'test': -1}
+
         self._load_train_examples()
         self._load_test_examples()
         self._load_dev_examples()
@@ -45,14 +47,17 @@ class LCQMC(HubDataset):
     def _load_train_examples(self):
         self.train_file = os.path.join(self.dataset_dir, "train.tsv")
         self.train_examples = self._read_tsv(self.train_file)
+        self.num_examples["train"] = len(self.train_examples)
 
     def _load_dev_examples(self):
         self.dev_file = os.path.join(self.dataset_dir, "dev.tsv")
         self.dev_examples = self._read_tsv(self.dev_file)
+        self.num_examples["dev"] = len(self.dev_examples)
 
     def _load_test_examples(self):
         self.test_file = os.path.join(self.dataset_dir, "test.tsv")
         self.test_examples = self._read_tsv(self.test_file)
+        self.num_examples["test"] = len(self.test_examples)
 
     def get_train_examples(self):
         return self.train_examples

@@ -22,15 +22,17 @@ import paddlehub as hub
 # yapf: disable
 parser = argparse.ArgumentParser(__doc__)
 parser.add_argument("--num_epoch", type=int, default=3, help="Number of epoches for fine-tuning.")
-parser.add_argument("--use_gpu", type=ast.literal_eval, default=False, help="Whether use GPU for finetuning, input should be True or False")
+parser.add_argument("--use_gpu", type=ast.literal_eval, default=True, help="Whether use GPU for finetuning, input should be True or False")
 parser.add_argument("--dataset", type=str, default="chnsenticorp", help="Directory to model checkpoint", choices=["chnsenticorp", "nlpcc_dbqa", "lcqmc"])
 parser.add_argument("--learning_rate", type=float, default=5e-5, help="Learning rate used to train with warmup.")
 parser.add_argument("--weight_decay", type=float, default=0.01, help="Weight decay rate for L2 regularizer.")
-parser.add_argument("--warmup_proportion", type=float, default=0.0, help="Warmup proportion params for warmup strategy")
+parser.add_argument("--warmup_proportion", type=float, default=0.1, help="Warmup proportion params for warmup strategy")
+parser.add_argument("--slanted_triangle_lr_ration", type=float, default=32, help="ration param for slanted triangle learning rate strategy")
+parser.add_argument("--slanted_triangle_lr_cut_frac", type=float, default=0.1, help="cut fraction param for slanted triangle learning rate strategy")
 parser.add_argument("--data_dir", type=str, default=None, help="Path to training data.")
 parser.add_argument("--checkpoint_dir", type=str, default=None, help="Directory to model checkpoint")
 parser.add_argument("--max_seq_len", type=int, default=512, help="Number of words of the longest seqence.")
-parser.add_argument("--batch_size", type=int, default=32, help="Total examples' number in batch for training.")
+parser.add_argument("--batch_size", type=int, default=24, help="Total examples' number in batch for training.")
 args = parser.parse_args()
 # yapf: enable.
 
@@ -75,15 +77,22 @@ if __name__ == '__main__':
     ]
 
     # Step4: Select finetune strategy, setup config and finetune
-    strategy = hub.AdamWeightDecayStrategy(
-        weight_decay=args.weight_decay,
-        learning_rate=args.learning_rate,
-        lr_scheduler="linear_decay",
-    )
+    #     strategy = hub.AdamWeightDecayStrategy(
+    #         warmup_proportion=args.warmup_proportion,
+    #         weight_decay=args.weight_decay,
+    #         learning_rate=args.learning_rate,
+    #         lr_scheduler="linear_decay",
+    #     )
 
     # Slanted Triangle Learning Rate FineTune Strategy
     strategy = hub.SlantedTriangleLRFineTuneStrategy(
-        ratio=32, cut_fraction=0.1, learning_rate=args.learning_rate)
+        ratio=args.slanted_triangle_lr_ration,
+        cut_fraction=args.slanted_triangle_lr_cut_frac,
+        learning_rate=args.learning_rate)
+
+    # Default Finetune Strategy (SGD)
+    #     strategy = hub.DefaultFinetuneStrategy(
+    #         learning_rate=args.learning_rate)
 
     # Setup runing config for PaddleHub Finetune API
     config = hub.RunConfig(

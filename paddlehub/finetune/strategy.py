@@ -40,6 +40,71 @@ def get_pretrained_parameter(main_program, start_program):
     return pretrained_parameters
 
 
+def get_parentOp_depth_max(parent_ops, op_depth_dict):
+    max_depth = 1
+    for parent_op in parent_ops:
+        depth = op_depth_dict[parent_op]
+        if max_depth < depth:
+            max_depth = depth
+    return max_depth
+
+
+def get_opDepth_min(ops, op_depth_dict):
+    min_depth = max(op_depth_dict.values())
+    for op in ops:
+        depth = op_depth_dict[op]
+        if min_depth > depth:
+            min_depth = depth
+    return min_depth
+
+
+def get_depth_parameter(main_program, start_program):
+    pretrained_parameters = []
+    global_block = main_program.global_block()
+
+    var_op_dict = {}
+    for op in global_block.ops:
+
+        for input_arg in op.input_arg_names:
+            if input_arg not in var_op_dict.keys():
+                var_op_dict[input_arg] = {"output_ops": [], "input_ops": []}
+            var_op_dict[input_arg]["output_ops"].append(op)
+
+        for output_arg in op.output_arg_names:
+            if output_arg not in var_op_dict.keys():
+                var_op_dict[output_arg] = {"output_ops": [], "input_ops": []}
+            var_op_dict[output_arg]["input_ops"].append(op)
+
+    op_depth_dict = {}
+    for op in global_block.ops:
+        parent_ops = []
+        for input_arg in op.input_arg_names:
+            for parent_op in var_op_dict[input_arg]["input_ops"]:
+                if parent_op not in parent_ops:
+                    parent_ops.append(parent_op)
+        if not parent_ops:
+            op_depth_dict[op] = 1
+        else:
+            op_depth_dict[op] = get_parentOp_depth_max(parent_ops,
+                                                       op_depth_dict) + 1
+
+    depth_ops_dict = {}
+    for op, depth in op_depth_dict.items():
+        if depth not in depth_ops_dict.keys():
+            depth_ops_dict[depth] = []
+        depth_ops_dict[depth].append(op)
+
+    depth_params_dict = {}
+    for param in global_block.iter_parameters():
+        adherent_ops = var_op_dict[param.name]["output_ops"]
+        depth = get_opDepth_min(adherent_ops, op_depth_dict)
+        if depth not in depth_params_dict:
+            depth_params_dict[depth] = []
+        depth_params_dict[depth].append(param)
+
+    return depth_params_dict
+
+
 def get_optimizer(optimizer_name, learning_rate):
     if optimizer_name.lower() == "sgd":
         optimizer = fluid.optimizer.SGD(learning_rate=learning_rate)
@@ -100,6 +165,10 @@ class DefaultStrategy(object):
         else:
             self.optimizer = fluid.optimizer.Adam(
                 learning_rate=self.learning_rate)
+
+    def step(self):
+        self.epoch += 1
+        pass
 
     def execute(self, loss):
         if self.optimizer is not None:
@@ -234,10 +303,10 @@ class SlantedTriangleLRFineTuneStrategy(DefaultStrategy):
                  optimizer_name="adam"):
         super(SlantedTriangleLRFineTuneStrategy, self).__init__(
             learning_rate=learning_rate, optimizer_name=optimizer_name)
-        self._max_learning_rate = learning_rate,
-        self._optimizer_name = optimizer_name,
-        self._ratio = ratio,
-        self._cut_fraction = cut_fraction,
+        self._max_learning_rate = learning_rate
+        self._optimizer_name = optimizer_name
+        self._ratio = ratio
+        self._cut_fraction = cut_fraction
 
     @property
     def ratio(self):

@@ -84,6 +84,8 @@ def _finetune_seq_label_task(task,
         elif isinstance(config.strategy, hub.SlantedTriangleLRFineTuneStrategy):
             scheduled_lr = config.strategy.execute(loss, main_program,
                                                    data_reader, config)
+        elif isinstance(config.strategy, hub.DiscriminativeLRFineTuneStrategy):
+            config.strategy.execute(loss, main_program)
         elif isinstance(config.strategy, hub.DefaultStrategy):
             config.strategy.execute(loss)
         #TODO: add more finetune strategy
@@ -202,6 +204,8 @@ def _finetune_cls_task(task, data_reader, feed_list, config=None,
         elif isinstance(config.strategy, hub.SlantedTriangleLRFineTuneStrategy):
             scheduled_lr = config.strategy.execute(loss, main_program,
                                                    data_reader, config)
+        elif isinstance(config.strategy, hub.DiscriminativeLRFineTuneStrategy):
+            config.strategy.execute(loss, main_program)
         elif isinstance(config.strategy, hub.DefaultStrategy):
             config.strategy.execute(loss)
         #TODO: add more finetune strategy
@@ -235,10 +239,11 @@ def _finetune_cls_task(task, data_reader, feed_list, config=None,
                 train_time_begin = time.time()
                 loss_v, accuracy_v = exe.run(
                     feed=data_feeder.feed(batch),
-                    fetch_list=[loss.name, accuracy.name],
+                    fetch_list=[loss.name, accuracy.name],  #scheduled_lr.name],
                     return_numpy=False)
                 loss_v = np.array(loss_v)
                 accuracy_v = np.array(accuracy_v)
+                lr_v = 1e-4  #np.array(lr)
                 train_time_used += time.time() - train_time_begin
                 global_step += 1
                 num_trained_examples += num_batch_examples
@@ -250,8 +255,9 @@ def _finetune_cls_task(task, data_reader, feed_list, config=None,
                     avg_loss = loss_sum / num_trained_examples
                     avg_acc = acc_sum / num_trained_examples
                     speed = config.log_interval / train_time_used
-                    logger.info("step %d: loss=%.5f acc=%.5f [step/sec: %.2f]" %
-                                (global_step, avg_loss, avg_acc, speed))
+                    logger.info(
+                        "step %d: lr=%.6f loss=%.5f acc=%.5f [step/sec: %.2f]" %
+                        (global_step, lr_v, avg_loss, avg_acc, speed))
 
                     # record visualdl log
                     train_loss_scalar.add_record(global_step, avg_loss)

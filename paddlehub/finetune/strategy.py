@@ -21,9 +21,11 @@ import multiprocessing
 
 import paddle.fluid as fluid
 
+from paddlehub.common.logger import logger
 from paddlehub.finetune.optimization import adam_weight_decay_optimization
-from paddlehub.finetune.optimization import slanted_triangle_learning_rate_optimization
 from paddlehub.finetune.regularizer import L2SPDecayRegularizer
+import paddle.fluid.layers.learning_rate_scheduler as lr_scheduler
+from paddle.fluid.layers import control_flow
 
 
 def get_pretrained_parameter(main_program, start_program):
@@ -43,7 +45,7 @@ def get_pretrained_parameter(main_program, start_program):
 def get_parentOp_depth_max(parent_ops, op_depth_dict):
     max_depth = 1
     for parent_op in parent_ops:
-        depth = op_depth_dict[parent_op]
+        depth = op_depth_dict.get(parent_op, 1)
         if max_depth < depth:
             max_depth = depth
     return max_depth
@@ -58,7 +60,7 @@ def get_opDepth_min(ops, op_depth_dict):
     return min_depth
 
 
-def get_depth_parameter(main_program, start_program):
+def get_depth_parameter(main_program):
     pretrained_parameters = []
     global_block = main_program.global_block()
 
@@ -76,6 +78,7 @@ def get_depth_parameter(main_program, start_program):
             var_op_dict[output_arg]["input_ops"].append(op)
 
     op_depth_dict = {}
+    #     print(len(global_block.ops))
     for op in global_block.ops:
         parent_ops = []
         for input_arg in op.input_arg_names:
@@ -88,21 +91,145 @@ def get_depth_parameter(main_program, start_program):
             op_depth_dict[op] = get_parentOp_depth_max(parent_ops,
                                                        op_depth_dict) + 1
 
-    depth_ops_dict = {}
-    for op, depth in op_depth_dict.items():
-        if depth not in depth_ops_dict.keys():
-            depth_ops_dict[depth] = []
-        depth_ops_dict[depth].append(op)
+#     depth_ops_dict = {}
+#     for op, depth in op_depth_dict.items():
+#         if depth not in depth_ops_dict.keys():
+#             depth_ops_dict[depth] = []
+#         depth_ops_dict[depth].append(op)
 
+#     print(len(depth_ops_dict[1]))
+#     for index in range(1, 20):
+#         print("%"*50)
+#         for op in depth_ops_dict[index]:
+#             print(op.type)
+#             print(op.input_arg_names)
     depth_params_dict = {}
+    updated_depth_params_dict = {}
     for param in global_block.iter_parameters():
         adherent_ops = var_op_dict[param.name]["output_ops"]
         depth = get_opDepth_min(adherent_ops, op_depth_dict)
-        if depth not in depth_params_dict:
+        if depth not in depth_params_dict.keys():
             depth_params_dict[depth] = []
+            updated_depth_params_dict[depth] = []
         depth_params_dict[depth].append(param)
+        updated_depth_params_dict[depth].append(param)
 
-    return depth_params_dict
+    depth_list = sorted(depth_params_dict.keys())
+    #print(depth_list)
+    len_depth_list = len(depth_list)
+    print(len_depth_list)
+    # updated_depth_params_dict = copy.deepcopy(depth_params_dict)
+    for index, depth in enumerate(depth_list):
+        for param in depth_params_dict[depth]:
+            prefix = param.name.split(".")[0]
+            if index < len_depth_list - 1:
+                next_depth = depth_list[index + 1]
+                #print(next_depth)
+                # print(depth_params_dict[next_depth])
+                for param_next_depth in depth_params_dict[next_depth]:
+                    prefix_next_depth = param_next_depth.name.split(".")[0]
+                    if prefix == prefix_next_depth:
+                        #print("#"*10, depth)
+                        updated_depth_params_dict[depth].append(
+                            param_next_depth)
+                        updated_depth_params_dict[next_depth].remove(
+                            param_next_depth)
+
+                        if not updated_depth_params_dict[next_depth]:
+                            #print("*"*10,next_depth )
+                            updated_depth_params_dict.pop(next_depth)
+
+
+#     for index in sorted(depth_params_dict.keys()):
+#         print(index, end = ":")
+#         for param in depth_params_dict[index]:
+#             print(param.name, end = " ")
+#         print()
+
+#     print("#"*100)
+#     for index in sorted(updated_depth_params_dict.keys()):
+#         print(index, end = ":")
+#         for param in updated_depth_params_dict[index]:
+#             print(param.name, end = " ")
+#         print()
+#     print(len(depth_params_dict))
+#     print(len(updated_depth_params_dict))
+
+#     for index in range(1, len(depth_params_dict) + 1):
+#         print(depth_params_dict[index])
+#     for key, value in sorted(depth_params_dict.keys()):
+#         print(key)
+#     exit()
+
+    return updated_depth_params_dict
+
+
+def set_discriminative_learning_rate(main_program,
+                                     max_learning_rate,
+                                     lr_factor=2.6):
+    depth_params_dict = get_depth_parameter(main_program)
+
+    sorted_depth = sorted(depth_params_dict.keys(), reverse=True)
+
+    #     for depth, params in depth_params_dict.items():
+    #         for param in params:
+    #             print(depth, param.optimize_attr)
+    #         print("$$$"*10)
+
+    power = 1
+    for depth in sorted_depth:
+        for index, param in enumerate(depth_params_dict[depth]):
+            print(depth, param.optimize_attr)
+            print("@@@" * 10)
+            if depth_params_dict[depth][index].optimize_attr[
+                    "learning_rate"] == 1.0:
+                depth_params_dict[depth][index].optimize_attr[
+                    "learning_rate"] = pow(1.0 / lr_factor, power)
+            print(depth, param.optimize_attr)
+            print("###" * 10)
+        print("$$$" * 10)
+        power += 1
+    #exit()
+
+
+def set_gradual_unfreeze(main_program, unfreeze_depths):
+    depth_params_dict = get_depth_parameter(main_program)
+
+    for depth in unfreeze_depths:
+        for index, param in enumerate(depth_params_dict[depth]):
+            depth_params_dict[depth][index].stop_gradient = False
+
+    freeze_depths = list(
+        set(depth_params_dict.keys()).difference(set(unfreeze_depths)))
+    for depth in freeze_depths:
+        for index, param in enumerate(depth_params_dict[depth]):
+            depth_params_dict[depth][index].stop_gradient = True
+
+
+def slanted_triangle_learning_rate_decay(
+        cut_step, max_train_step, max_learning_rate, ratio, main_program):
+
+    with main_program._lr_schedule_guard():
+        global_step = lr_scheduler._decay_step_counter()
+
+        lr = fluid.layers.create_global_var(
+            shape=[1],
+            value=0.0,
+            dtype='float32',
+            persistable=True,
+            name="learning_rate")
+
+        with control_flow.Switch() as switch:
+            with switch.case(global_step <= cut_step):
+                pct = global_step / cut_step
+                decayed_lr = max_learning_rate * (1 + pct * (ratio - 1)) / ratio
+                fluid.layers.assign(decayed_lr, lr)
+            with switch.default():
+                pct = 1 - (global_step - cut_step) / (max_train_step - cut_step)
+                decayed_lr = max_learning_rate * (1 + pct * (ratio - 1)) / ratio
+                fluid.layers.assign(decayed_lr, lr)
+
+        return lr
 
 
 def get_optimizer(optimizer_name, learning_rate):
@@ -167,7 +294,6 @@ class DefaultStrategy(object):
                 learning_rate=self.learning_rate)
 
     def step(self):
-        self.epoch += 1
         pass
 
     def execute(self, loss):
@@ -300,13 +426,31 @@ class SlantedTriangleLRFineTuneStrategy(DefaultStrategy):
                  ratio=32,
                  cut_fraction=0.1,
                  learning_rate=1e-4,
-                 optimizer_name="adam"):
+                 optimizer_name="adam",
+                 use_gradual_unfreeze=True):
         super(SlantedTriangleLRFineTuneStrategy, self).__init__(
             learning_rate=learning_rate, optimizer_name=optimizer_name)
         self._max_learning_rate = learning_rate
         self._optimizer_name = optimizer_name
         self._ratio = ratio
         self._cut_fraction = cut_fraction
+        self.epoch = 0
+        self.use_gradual_unfreeze = use_gradual_unfreeze
+
+    def step(self):
+        self.epoch += 1
+
+        depth_params_dict = get_depth_parameter(self.main_program)
+        sorted_depth = sorted(depth_params_dict.keys(), reverse=True)
+        max_depth = len(sorted_depth)
+
+        if max_depth > 0:
+            set_gradual_unfreeze(
+                main_program, unfreeze_depths=sorted_depth[:self.epoch])
+        else:
+            logger.warning(
+                "The max op-depth in the network is %s. That results in that can't use the gradual unfreeze finetune strategy."
+                % (max_depth))
 
     @property
     def ratio(self):
@@ -320,12 +464,50 @@ class SlantedTriangleLRFineTuneStrategy(DefaultStrategy):
     def max_learning_rate(self):
         return self._max_learning_rate
 
+
+#     def slanted_triangle_learning_rate_optimization(loss, cut_step, max_train_step,
+#                                                     max_learning_rate, ratio, main_program):
+#         scheduled_lr = slanted_triangle_learning_rate_decay(
+#         cut_step, max_train_step, max_learning_rate, ratio, main_program)
+#         optimizer = fluid.optimizer.Adam(learning_rate=scheduled_lr)
+#         optimizer.minimize(loss)
+
+#     return scheduled_lr
+
     def execute(self, loss, main_program, data_reader, config):
+        self.main_program = main_program
         num_train_examples = data_reader.dataset.num_examples["train"]
         max_train_step = config.num_epoch * num_train_examples // config.batch_size
-        cut_step = int(max_train_step * self.cut_fraction[0])
-        scheduled_lr = slanted_triangle_learning_rate_optimization(
-            loss, cut_step, max_train_step, self.max_learning_rate, self.ratio,
+        cut_step = int(max_train_step * self.cut_fraction)
+        scheduled_lr = slanted_triangle_learning_rate_decay(
+            cut_step, max_train_step, self.max_learning_rate, self.ratio,
             main_program)
+        self.optimizer = get_optimizer(self._optimizer_name, scheduled_lr)
+        self.optimizer.minimize(loss)
 
         return scheduled_lr
+
+
+class DiscriminativeLRFineTuneStrategy(DefaultStrategy):
+    def __init__(self, learning_rate=1e-4, optimizer_name="adam",
+                 lr_factor=2.6):
+        super(DiscriminativeLRFineTuneStrategy, self).__init__(
+            learning_rate=learning_rate, optimizer_name=optimizer_name)
+        self._max_learning_rate = learning_rate
+        self._lr_factor = lr_factor
+
+    @property
+    def lr_factor(self):
+        return self._lr_factor
+
+    @property
+    def max_learning_rate(self):
+        return self._max_learning_rate
+
+    def execute(self, loss, main_program):
+
+        set_discriminative_learning_rate(main_program, self.max_learning_rate,
+                                         self.lr_factor)
+
+        if self.optimizer is not None:
+            self.optimizer.minimize(loss)

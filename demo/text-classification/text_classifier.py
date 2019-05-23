@@ -24,14 +24,14 @@ parser = argparse.ArgumentParser(__doc__)
 parser.add_argument("--num_epoch", type=int, default=3, help="Number of epoches for fine-tuning.")
 parser.add_argument("--use_gpu", type=ast.literal_eval, default=True, help="Whether use GPU for finetuning, input should be True or False")
 parser.add_argument("--dataset", type=str, default="chnsenticorp", help="Directory to model checkpoint", choices=["chnsenticorp", "nlpcc_dbqa", "lcqmc"])
-parser.add_argument("--learning_rate", type=float, default=5e-5, help="Learning rate used to train with warmup.")
+parser.add_argument("--learning_rate", type=float, default=1e-1, help="Learning rate used to train with warmup.")
 parser.add_argument("--weight_decay", type=float, default=0.01, help="Weight decay rate for L2 regularizer.")
 parser.add_argument("--warmup_proportion", type=float, default=0.1, help="Warmup proportion params for warmup strategy")
 parser.add_argument("--slanted_triangle_lr_ration", type=float, default=32, help="ration param for slanted triangle learning rate strategy")
 parser.add_argument("--slanted_triangle_lr_cut_frac", type=float, default=0.1, help="cut fraction param for slanted triangle learning rate strategy")
 parser.add_argument("--data_dir", type=str, default=None, help="Path to training data.")
 parser.add_argument("--checkpoint_dir", type=str, default=None, help="Directory to model checkpoint")
-parser.add_argument("--max_seq_len", type=int, default=512, help="Number of words of the longest seqence.")
+parser.add_argument("--max_seq_len", type=int, default=128, help="Number of words of the longest seqence.")
 parser.add_argument("--batch_size", type=int, default=24, help="Total examples' number in batch for training.")
 args = parser.parse_args()
 # yapf: enable.
@@ -85,10 +85,13 @@ if __name__ == '__main__':
     #     )
 
     # Slanted Triangle Learning Rate FineTune Strategy
-    strategy = hub.SlantedTriangleLRFineTuneStrategy(
-        ratio=args.slanted_triangle_lr_ration,
-        cut_fraction=args.slanted_triangle_lr_cut_frac,
-        learning_rate=args.learning_rate)
+    #     strategy = hub.SlantedTriangleLRFineTuneStrategy(
+    #         ratio=args.slanted_triangle_lr_ration,
+    #         cut_fraction=args.slanted_triangle_lr_cut_frac,
+    #         learning_rate=args.learning_rate)
+
+    strategy = hub.DiscriminativeLRFineTuneStrategy(
+        learning_rate=args.learning_rate, lr_factor=2.6)
 
     # Default Finetune Strategy (SGD)
     #     strategy = hub.DefaultFinetuneStrategy(

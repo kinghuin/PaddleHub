@@ -1,3 +1,4 @@
+#coding:utf-8
 # Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
@@ -20,6 +21,9 @@ from __future__ import print_function
 class BaseProcessor(object):
     def __init__(self, module):
         pass
+
+    def configs(self):
+        return []
 
     def preprocess(self, sign_name, data_dict):
         raise NotImplementedError(

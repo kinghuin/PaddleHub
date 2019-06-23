@@ -1,3 +1,4 @@
+#coding:utf-8
 # Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
@@ -40,7 +41,7 @@ class ListCommand(BaseCommand):
         tp = TablePrinter(
             titles=["ModuleName", "Path"], placeholders=placeholders)
         for module_name, module_dir in all_modules.items():
-            tp.add_line(contents=[module_name, module_dir])
+            tp.add_line(contents=[module_name, module_dir[0]])
         print(tp.get_text())
         return True
 

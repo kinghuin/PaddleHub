@@ -1,3 +1,4 @@
+#coding:utf-8
 #   Copyright (c) 2019 PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +19,7 @@ from .chnsenticorp import ChnSentiCorp
 from .msra_ner import MSRA_NER
 from .nlpcc_dbqa import NLPCC_DBQA
 from .lcqmc import LCQMC
+from .toxic import Toxic
 
 # CV Dataset
 from .dogcat import DogCatDataset as DogCat

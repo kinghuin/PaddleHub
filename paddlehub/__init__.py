@@ -1,3 +1,4 @@
+#coding:utf-8
 # Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
@@ -12,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#coding:utf-8
-
 import six
+
+if six.PY2:
+    import sys
+    reload(sys)
+    sys.setdefaultencoding("UTF-8")
 
 from . import module
 from . import common
@@ -27,6 +31,7 @@ from .common.dir import USER_HOME
 from .common.dir import HUB_HOME
 from .common.dir import MODULE_HOME
 from .common.dir import CACHE_HOME
+from .common.dir import CONF_HOME
 from .common.logger import logger
 from .common.paddle_helper import connect_program
 from .common.hub_server import default_hub_server
@@ -38,19 +43,14 @@ from .module.manager import default_module_manager
 
 from .io.type import DataType
 
-from .finetune.task import Task
-from .finetune.task import create_seq_label_task
-from .finetune.task import create_text_cls_task
-from .finetune.task import create_img_cls_task
-from .finetune.finetune import finetune_and_eval
+from .finetune.task import ClassifierTask
+from .finetune.task import TextClassifierTask
+from .finetune.task import ImageClassifierTask
+from .finetune.task import SequenceLabelTask
+from .finetune.task import MultiLabelClassifierTask
 from .finetune.config import RunConfig
 from .finetune.strategy import AdamWeightDecayStrategy
 from .finetune.strategy import DefaultStrategy
 from .finetune.strategy import SlantedTriangleLRFineTuneStrategy
 from .finetune.strategy import DefaultFinetuneStrategy
 from .finetune.strategy import DiscriminativeLRFineTuneStrategy
-
-if six.PY2:
-    import sys
-    reload(sys)
-    sys.setdefaultencoding("UTF-8")

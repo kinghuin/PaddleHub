@@ -1,5 +1,7 @@
+#coding:utf-8
 import argparse
 import os
+import ast
 
 import paddle.fluid as fluid
 import paddlehub as hub
@@ -7,12 +9,14 @@ import numpy as np
 
 # yapf: disable
 parser = argparse.ArgumentParser(__doc__)
-parser.add_argument("--num_epoch",      type=int,   default=1,                          help="Number of epoches for fine-tuning.")
-parser.add_argument("--use_gpu",        type=bool,  default=True,                      help="Whether use GPU for fine-tuning.")
-parser.add_argument("--checkpoint_dir", type=str,   default="paddlehub_finetune_ckpt",  help="Path to save log data.")
-parser.add_argument("--batch_size",     type=int,   default=16,                         help="Total examples' number in batch for training.")
-parser.add_argument("--module",         type=str,   default="resnet50",                 help="Module used as feature extractor.")
-parser.add_argument("--dataset",        type=str,   default="flowers",                  help="Dataset to finetune.")
+parser.add_argument("--num_epoch",          type=int,               default=1,                          help="Number of epoches for fine-tuning.")
+parser.add_argument("--use_gpu",            type=ast.literal_eval,  default=False,                      help="Whether use GPU for fine-tuning.")
+parser.add_argument("--checkpoint_dir",     type=str,               default="paddlehub_finetune_ckpt",  help="Path to save log data.")
+parser.add_argument("--batch_size",         type=int,               default=16,                         help="Total examples' number in batch for training.")
+parser.add_argument("--module",             type=str,               default="resnet50",                 help="Module used as feature extractor.")
+parser.add_argument("--dataset",            type=str,               default="flowers",                  help="Dataset to finetune.")
+parser.add_argument("--use_pyreader",       type=ast.literal_eval,  default=False,                      help="Whether use pyreader to feed data.")
+parser.add_argument("--use_data_parallel",  type=ast.literal_eval,  default=False,                      help="Whether use data parallel.")
 parser.add_argument("--slanted_triangle_lr_ration", type=float, default=32, help="ration param for slanted triangle learning rate strategy")
 parser.add_argument("--slanted_triangle_lr_cut_frac", type=float, default=0.1, help="cut fraction param for slanted triangle learning rate strategy")
 # yapf: enable.
@@ -52,11 +56,9 @@ def finetune(args):
         dataset=dataset)
 
     feature_map = output_dict["feature_map"]
-    task = hub.create_img_cls_task(
-        feature=feature_map, num_classes=dataset.num_labels)
 
     img = input_dict["image"]
-    feed_list = [img.name, task.variable('label').name]
+    feed_list = [img.name]
 
     # Slanted Triangle Learning Rate FineTune Strategy
     lr_strategy = hub.SlantedTriangleLRFineTuneStrategy(
@@ -65,6 +67,8 @@ def finetune(args):
         learning_rate=1e-4)
 
     config = hub.RunConfig(
+        use_data_parallel=args.use_data_parallel,
+        use_pyreader=args.use_pyreader,
         use_cuda=args.use_gpu,
         num_epoch=args.num_epoch,
         batch_size=args.batch_size,
@@ -72,8 +76,13 @@ def finetune(args):
         checkpoint_dir=args.checkpoint_dir,
         strategy=lr_strategy)  # hub.finetune.strategy.DefaultFinetuneStrategy()
 
-    hub.finetune_and_eval(
-        task, feed_list=feed_list, data_reader=data_reader, config=config)
+    task = hub.ImageClassifierTask(
+        data_reader=data_reader,
+        feed_list=feed_list,
+        feature=feature_map,
+        num_classes=dataset.num_labels,
+        config=config)
+    task.finetune_and_eval()
 
 
 if __name__ == "__main__":

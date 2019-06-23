@@ -1,3 +1,4 @@
+#coding:utf-8
 # Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
@@ -102,7 +103,7 @@ class ShowCommand(BaseCommand):
             colors=["light_red", None],
             aligns=["^", "<"])
         tp.add_line(
-            contents=["Location", module_dir],
+            contents=["Location", module_dir[0]],
             colors=["light_red", None],
             aligns=["^", "<"])
         print(tp.get_text())
@@ -124,9 +125,9 @@ class ShowCommand(BaseCommand):
 
         cwd = os.getcwd()
         module_dir = default_module_manager.search_module(module_name)
-        module_dir = os.path.join(cwd,
-                                  module_name) if not module_dir else module_dir
-        if not module_dir or not os.path.exists(module_dir):
+        module_dir = (os.path.join(cwd, module_name),
+                      None) if not module_dir else module_dir
+        if not module_dir or not os.path.exists(module_dir[0]):
             print("%s is not existed!" % module_name)
             return True
 

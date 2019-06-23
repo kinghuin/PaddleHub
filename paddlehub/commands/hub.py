@@ -1,3 +1,4 @@
+#coding:utf-8
 # Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
@@ -16,6 +17,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import six
 import sys
 
 from paddlehub.common.logger import logger
@@ -56,8 +58,20 @@ command = HubCommand.instance()
 
 
 def main():
-    command.execute(sys.argv[1:])
+    argv = []
+    for item in sys.argv:
+        if six.PY2:
+            argv.append(item.decode(sys.stdin.encoding).decode("utf8"))
+        else:
+            argv.append(item)
+    command.execute(argv[1:])
 
 
 if __name__ == "__main__":
-    command.execute(sys.argv[1:])
+    argv = []
+    for item in sys.argv:
+        if six.PY2:
+            argv.append(item.decode(sys.stdin.encoding).decode("utf8"))
+        else:
+            argv.append(item)
+    command.execute(argv[1:])

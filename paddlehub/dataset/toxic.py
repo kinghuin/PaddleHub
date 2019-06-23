@@ -20,45 +20,46 @@ from __future__ import print_function
 from collections import namedtuple
 import codecs
 import os
-import csv
+import pandas as pd
+from numpy import nan
 
 from paddlehub.dataset import InputExample, HubDataset
 from paddlehub.common.downloader import default_downloader
 from paddlehub.common.dir import DATA_HOME
 from paddlehub.common.logger import logger
 
-_DATA_URL = "https://paddlehub-dataset.bj.bcebos.com/lcqmc.tar.gz"
+_DATA_URL = "https://paddlehub-dataset.bj.bcebos.com/toxic.tar.gz"
 
 
-class LCQMC(HubDataset):
+class Toxic(HubDataset):
+    """
+    ChnSentiCorp (by Tan Songbo at ICT of Chinese Academy of Sciences, and for
+    opinion mining)
+    """
+
     def __init__(self):
-        self.dataset_dir = os.path.join(DATA_HOME, "lcqmc")
+        self.dataset_dir = os.path.join(DATA_HOME, "toxic")
         if not os.path.exists(self.dataset_dir):
             ret, tips, self.dataset_dir = default_downloader.download_file_and_uncompress(
                 url=_DATA_URL, save_path=DATA_HOME, print_progress=True)
         else:
             logger.info("Dataset {} already cached.".format(self.dataset_dir))
 
-        self.num_examples = {'train': -1, 'dev': -1, 'test': -1}
-
         self._load_train_examples()
         self._load_test_examples()
         self._load_dev_examples()
 
     def _load_train_examples(self):
-        self.train_file = os.path.join(self.dataset_dir, "train.tsv")
-        self.train_examples = self._read_tsv(self.train_file)
-        self.num_examples["train"] = len(self.train_examples)
+        self.train_file = os.path.join(self.dataset_dir, "train.csv")
+        self.train_examples = self._read_csv(self.train_file)
 
     def _load_dev_examples(self):
-        self.dev_file = os.path.join(self.dataset_dir, "dev.tsv")
-        self.dev_examples = self._read_tsv(self.dev_file)
-        self.num_examples["dev"] = len(self.dev_examples)
+        self.dev_file = os.path.join(self.dataset_dir, "dev.csv")
+        self.dev_examples = self._read_csv(self.dev_file)
 
     def _load_test_examples(self):
-        self.test_file = os.path.join(self.dataset_dir, "test.tsv")
-        self.test_examples = self._read_tsv(self.test_file)
-        self.num_examples["test"] = len(self.test_examples)
+        self.test_file = os.path.join(self.dataset_dir, "test.csv")
+        self.test_examples = self._read_csv(self.test_file)
 
     def get_train_examples(self):
         return self.train_examples
@@ -70,8 +71,10 @@ class LCQMC(HubDataset):
         return self.test_examples
 
     def get_labels(self):
-        """See base class."""
-        return ["0", "1"]
+        return [
+            'toxic', 'severe_toxic', 'obscene', 'threat', 'insult',
+            'identity_hate'
+        ]
 
     @property
     def num_labels(self):
@@ -80,23 +83,21 @@ class LCQMC(HubDataset):
         """
         return len(self.get_labels())
 
-    def _read_tsv(self, input_file, quotechar=None):
+    def _read_csv(self, input_file, quotechar=None):
         """Reads a tab separated value file."""
-        with codecs.open(input_file, "r", encoding="UTF-8") as f:
-            reader = csv.reader(f, delimiter="\t", quotechar=quotechar)
-            examples = []
-            seq_id = 0
-            header = next(reader)  # skip header
-            for line in reader:
-                example = InputExample(
-                    guid=seq_id, label=line[2], text_a=line[0], text_b=line[1])
-                seq_id += 1
-                examples.append(example)
+        data = pd.read_csv(input_file, encoding="UTF-8")
+        examples = []
+        for index, row in data.iterrows():
+            guid = row["id"]
+            text = row["comment_text"]
+            labels = [int(value) for value in row[2:]]
+            example = InputExample(guid=guid, label=labels, text_a=text)
+            examples.append(example)
 
-            return examples
+        return examples
 
 
 if __name__ == "__main__":
-    ds = LCQMC()
+    ds = Toxic()
     for e in ds.get_train_examples():
         print("{}\t{}\t{}\t{}".format(e.guid, e.text_a, e.text_b, e.label))

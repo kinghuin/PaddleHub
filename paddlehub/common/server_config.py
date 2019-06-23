@@ -1,4 +1,3 @@
-#coding:utf-8
 # Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
@@ -13,5 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import module
-from . import signature
+HUB_SERVERS = ["http://hub.paddlepaddle.org:8888"]
+default_server_config = {
+    "server_url": HUB_SERVERS,
+    "resource_storage_server_url": "https://bj.bcebos.com/paddlehub/"
+}

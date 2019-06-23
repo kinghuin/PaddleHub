@@ -1,3 +1,4 @@
+#coding:utf-8
 #   Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
@@ -26,39 +27,48 @@ from paddlehub.common.logger import logger
 CKPT_FILE_NAME = "ckpt.meta"
 
 
-def load_checkpoint(checkpoint_dir, exe):
+def load_checkpoint(checkpoint_dir, exe, main_program):
+
     ckpt_meta_path = os.path.join(checkpoint_dir, CKPT_FILE_NAME)
+    ckpt = checkpoint_pb2.CheckPoint()
     logger.info("Try loading checkpoint from {}".format(ckpt_meta_path))
     if os.path.exists(ckpt_meta_path):
-        ckpt = checkpoint_pb2.CheckPoint()
         with open(ckpt_meta_path, "rb") as f:
             ckpt.ParseFromString(f.read())
+    current_epoch = 1
+    global_step = 0
 
-        fluid.io.load_persistables(exe, ckpt.latest_model_dir)
+    def if_exist(var):
+        return os.path.exists(os.path.join(ckpt.latest_model_dir, var.name))
+
+    if ckpt.latest_model_dir:
+        fluid.io.load_vars(
+            exe, ckpt.latest_model_dir, main_program, predicate=if_exist)
 
         logger.info("PaddleHub model checkpoint loaded. current_epoch={}, "
                     "global_step={}".format(ckpt.current_epoch,
                                             ckpt.global_step))
-        return ckpt.current_epoch, ckpt.global_step
-    else:
-        current_epoch = 1
-        global_step = 0
-        latest_model_dir = None
-        logger.info(
-            "PaddleHub model checkpoint not found, start training from scratch..."
-        )
-        exe.run(fluid.default_startup_program())
+        return True, ckpt.current_epoch, ckpt.global_step
 
-        return current_epoch, global_step
+    logger.info(
+        "PaddleHub model checkpoint not found, start training from scratch...")
+
+    return False, current_epoch, global_step
 
 
-def save_checkpoint(checkpoint_dir, current_epoch, global_step, exe):
+def save_checkpoint(checkpoint_dir,
+                    current_epoch,
+                    global_step,
+                    exe,
+                    main_program=fluid.default_main_program()):
+
     ckpt_meta_path = os.path.join(checkpoint_dir, CKPT_FILE_NAME)
     ckpt = checkpoint_pb2.CheckPoint()
 
     model_saved_dir = os.path.join(checkpoint_dir, "step_%d" % global_step)
     logger.info("Saving model checkpoint to {}".format(model_saved_dir))
-    fluid.io.save_persistables(exe, dirname=model_saved_dir)
+    fluid.io.save_persistables(
+        exe, dirname=model_saved_dir, main_program=main_program)
 
     ckpt.current_epoch = current_epoch
     ckpt.global_step = global_step

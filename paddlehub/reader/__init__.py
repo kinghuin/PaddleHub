@@ -1,3 +1,4 @@
+#coding:utf-8
 #   Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
@@ -15,4 +16,5 @@
 from .nlp_reader import ClassifyReader
 from .nlp_reader import SequenceLabelReader
 from .nlp_reader import LACClassifyReader
+from .nlp_reader import MultiLabelClassifyReader
 from .cv_reader import ImageClassificationReader

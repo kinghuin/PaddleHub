@@ -1,3 +1,4 @@
+#coding:utf-8
 # Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
@@ -49,7 +50,7 @@ class ClearCommand(BaseCommand):
     def __init__(self, name):
         super(ClearCommand, self).__init__(name)
         self.show_in_help = True
-        self.description = "Clear all cache data."
+        self.description = "Clear all cached data."
 
     def cache_dir(self):
         return CACHE_HOME

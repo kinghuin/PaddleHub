@@ -1,3 +1,4 @@
+#coding:utf-8
 # Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
@@ -20,3 +21,4 @@ HUB_HOME = os.path.join(USER_HOME, ".paddlehub")
 MODULE_HOME = os.path.join(HUB_HOME, "modules")
 CACHE_HOME = os.path.join(HUB_HOME, "cache")
 DATA_HOME = os.path.join(HUB_HOME, "dataset")
+CONF_HOME = os.path.join(HUB_HOME, "conf")

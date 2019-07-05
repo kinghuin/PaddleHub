@@ -12,8 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-HUB_SERVERS = ["http://hub.paddlepaddle.org:8888"]
+HUB_SERVERS = ["http://paddlepaddle.org.cn/paddlehub"]
+
+STAT_SERVERS = [
+    "http://paddlepaddle.org.cn/paddlehub/stat",
+    "http://paddlepaddle.org.cn/paddlehub/stat"
+]
+
 default_server_config = {
     "server_url": HUB_SERVERS,
-    "resource_storage_server_url": "https://bj.bcebos.com/paddlehub/"
+    "resource_storage_server_url": "https://bj.bcebos.com/paddlehub-data/",
+    "debug": False
 }
+
+default_stat_config = {"server_list": STAT_SERVERS}

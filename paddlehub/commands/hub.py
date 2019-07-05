@@ -19,8 +19,11 @@ from __future__ import print_function
 
 import six
 import sys
+import requests
 
 from paddlehub.common.logger import logger
+from paddlehub.common.utils import sys_stdin_encoding
+from paddlehub.common import stats
 from paddlehub.commands.base_command import BaseCommand
 from paddlehub.commands import show
 from paddlehub.commands import help
@@ -49,7 +52,7 @@ class HubCommand(BaseCommand):
             help.command.execute(argv)
             exit(1)
             return False
-
+        stats.hub_stat(['hub'] + argv)
         command = BaseCommand.command_dict[sub_command]
         return command.execute(argv[1:])
 
@@ -61,7 +64,7 @@ def main():
     argv = []
     for item in sys.argv:
         if six.PY2:
-            argv.append(item.decode(sys.stdin.encoding).decode("utf8"))
+            argv.append(item.decode(sys_stdin_encoding()).decode("utf8"))
         else:
             argv.append(item)
     command.execute(argv[1:])
@@ -71,7 +74,7 @@ if __name__ == "__main__":
     argv = []
     for item in sys.argv:
         if six.PY2:
-            argv.append(item.decode(sys.stdin.encoding).decode("utf8"))
+            argv.append(item.decode(sys_stdin_encoding()).decode("utf8"))
         else:
             argv.append(item)
     command.execute(argv[1:])

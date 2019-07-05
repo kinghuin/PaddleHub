@@ -29,7 +29,7 @@ import paddle.fluid as fluid
 from visualdl import LogWriter
 
 import paddlehub as hub
-from paddlehub.common.paddle_helper import dtype_map
+from paddlehub.common.paddle_helper import dtype_map, clone_program
 from paddlehub.common.utils import mkdir, to_list
 from paddlehub.common.logger import logger
 from paddlehub.finetune.checkpoint import load_checkpoint, save_checkpoint
@@ -74,7 +74,7 @@ class RunEnv(object):
         self.py_reader = None
         self.reader = None
         self.loss = None
-        self.label = None
+        self.labels = None
         self.metrics = None
         self.is_inititalized = False
         self.UNG = copy.deepcopy(fluid.unique_name.generator)
@@ -98,15 +98,20 @@ class BasicTask(object):
         self._base_data_reader = data_reader
         self._base_feed_list = feed_list
         if main_program is None:
-            self._base_main_program = fluid.default_main_program().clone()
+            self._base_main_program = clone_program(
+                fluid.default_main_program(), for_test=False)
+
         else:
-            self._base_main_program = main_program.clone()
+            self._base_main_program = clone_program(
+                main_program, for_test=False)
         if startup_program is None:
-            self._base_startup_program = fluid.default_startup_program().clone()
+            self._base_startup_program = clone_program(
+                fluid.default_startup_program(), for_test=False)
         else:
-            self._base_startup_program = startup_program.clone()
-        self._base_compiled_program = None
+            self._base_startup_program = clone_program(
+                startup_program, for_test=False)
         self.is_checkpoint_loaded = False
+        self._base_compiled_program = None
 
         # run config
         self.config = config if config else RunConfig()
@@ -169,19 +174,22 @@ class BasicTask(object):
 
         self._build_env_start_event()
         self.env.is_inititalized = True
-        self.env.main_program = self._base_main_program.clone()
+        self.env.main_program = clone_program(
+            self._base_main_program, for_test=False)
+
         self.env.startup_program = fluid.Program()
         with fluid.program_guard(self.env.main_program,
                                  self._base_startup_program):
             with fluid.unique_name.guard(self.env.UNG):
                 self.env.outputs = self._build_net()
                 if self.is_train_phase or self.is_test_phase:
-                    self.env.label = self._add_label()
+                    self.env.labels = self._add_label()
                     self.env.loss = self._add_loss()
                     self.env.metrics = self._add_metrics()
 
         if self.is_predict_phase or self.is_test_phase:
-            self.env.main_program = self.env.main_program.clone(for_test=True)
+            self.env.main_program = clone_program(
+                self.env.main_program, for_test=True)
             hub.common.paddle_helper.set_op_attr(
                 self.env.main_program, is_test=True)
 
@@ -268,8 +276,13 @@ class BasicTask(object):
     @property
     def places(self):
         if self.config.use_cuda:
-            return fluid.framework.cuda_places()
-        return fluid.framework.cpu_places()
+            _places = fluid.framework.cuda_places()
+        else:
+            _places = fluid.framework.cpu_places()
+
+        if not self.config.use_data_parallel:
+            return [_places[0]]
+        return _places
 
     @property
     def is_train_phase(self):
@@ -358,13 +371,13 @@ class BasicTask(object):
         return self.env.loss
 
     @property
-    def label(self):
+    def labels(self):
         if self.is_predict_phase:
             raise RuntimeError()
 
         if not self.env.is_inititalized:
             self._build_env()
-        return self.env.label
+        return self.env.labels
 
     @property
     def outputs(self):
@@ -389,7 +402,7 @@ class BasicTask(object):
     def feed_list(self):
         feed_list = [varname for varname in self._base_feed_list]
         if self.is_train_phase or self.is_test_phase:
-            feed_list += [self.label.name]
+            feed_list += [label.name for label in self.labels]
         return feed_list
 
     @property
@@ -409,8 +422,17 @@ class BasicTask(object):
     def _build_env_end_event(self):
         pass
 
-    def _calculate_metrics(self, run_states):
-        raise NotImplementedError
+    def _finetune_start_event(self):
+        logger.info("PaddleHub finetune start")
+
+    def _finetune_end_event(self, run_states):
+        logger.info("PaddleHub finetune finished.")
+
+    def _predict_start_event(self):
+        logger.info("PaddleHub predict start")
+
+    def _predict_end_event(self, run_states):
+        logger.info("PaddleHub predict finished.")
 
     def _eval_start_event(self):
         logger.info("Evaluation on {} dataset start".format(self.phase))
@@ -426,7 +448,7 @@ class BasicTask(object):
             "step %d: [step/sec: %.2f]" % (self.current_step, run_speed))
 
     def _save_ckpt_interval_event(self):
-        self.save_checkpoint(self.current_epoch, self.current_step)
+        self.save_checkpoint()
 
     def _eval_interval_event(self):
         self.eval(phase="dev")
@@ -434,12 +456,6 @@ class BasicTask(object):
     def _run_step_event(self, run_state):
         if self.is_predict_phase:
             yield run_state.run_results
-
-    def _finetune_start_event(self):
-        logger.info("PaddleHub finetune start")
-
-    def _finetune_end_event(self, run_state):
-        logger.info("PaddleHub finetune finished.")
 
     def _build_net(self):
         raise NotImplementedError
@@ -453,9 +469,12 @@ class BasicTask(object):
     def _add_metrics(self):
         raise NotImplementedError
 
+    def _calculate_metrics(self, run_states):
+        raise NotImplementedError
+
     # NOTE: current saved checkpoint machanism is not completed,
     # it can't restore dataset training status
-    def save_checkpoint(self, epoch, step):
+    def save_checkpoint(self):
         save_checkpoint(
             checkpoint_dir=self.config.checkpoint_dir,
             current_epoch=self.current_epoch,
@@ -484,7 +503,7 @@ class BasicTask(object):
             self.exe, dirname=dirname, main_program=self.main_program)
 
     def finetune_and_eval(self):
-        self.finetune(do_eval=True)
+        return self.finetune(do_eval=True)
 
     def finetune(self, do_eval=False):
         # Start to finetune
@@ -498,13 +517,14 @@ class BasicTask(object):
                     self.env.current_epoch += 1
 
                 # Save checkpoint after finetune
-                self.save_checkpoint(self.current_epoch + 1, self.current_step)
+                self.save_checkpoint()
 
                 # Final evaluation
                 self.eval(phase="dev")
                 self.eval(phase="test")
 
             self._finetune_end_event(run_states)
+            return run_states
 
     def eval(self, phase="dev"):
         with self.phase_guard(phase=phase):
@@ -512,6 +532,7 @@ class BasicTask(object):
             self._eval_start_event()
             run_states = self._run()
             self._eval_end_event(run_states)
+            return run_states
 
     def predict(self, data, load_best_model=True):
         with self.phase_guard(phase="predict"):
@@ -521,9 +542,11 @@ class BasicTask(object):
                                                "best_model")
                 self.load_parameters(best_model_path)
             self._predict_data = data
+            self._predict_start_event()
             run_states = self._run()
+            self._predict_end_event(run_states)
             self._predict_data = None
-        return [run_state.run_results for run_state in run_states]
+        return run_states
 
     def _run(self, do_eval=False):
         with fluid.program_guard(self.main_program, self.startup_program):
@@ -673,15 +696,17 @@ class ClassifierTask(BasicTask):
         return [logits]
 
     def _add_label(self):
-        return fluid.layers.data(name="label", dtype="int64", shape=[1])
+        return [fluid.layers.data(name="label", dtype="int64", shape=[1])]
 
     def _add_loss(self):
         ce_loss = fluid.layers.cross_entropy(
-            input=self.outputs[0], label=self.label)
+            input=self.outputs[0], label=self.labels[0])
         return fluid.layers.mean(x=ce_loss)
 
     def _add_metrics(self):
-        return [fluid.layers.accuracy(input=self.outputs[0], label=self.label)]
+        return [
+            fluid.layers.accuracy(input=self.outputs[0], label=self.labels[0])
+        ]
 
     def _build_env_end_event(self):
         with self.log_writer.mode(self.phase) as logw:
@@ -838,17 +863,17 @@ class SequenceLabelTask(BasicTask):
     def _add_label(self):
         label = fluid.layers.data(
             name="label", shape=[self.max_seq_len, 1], dtype='int64')
-        return label
+        return [label]
 
     def _add_loss(self):
-        labels = fluid.layers.flatten(self.label, axis=2)
+        labels = fluid.layers.flatten(self.labels[0], axis=2)
         ce_loss = fluid.layers.cross_entropy(
             input=self.outputs[0], label=labels)
         loss = fluid.layers.mean(x=ce_loss)
         return loss
 
     def _add_metrics(self):
-        self.ret_labels = fluid.layers.reshape(x=self.label, shape=[-1, 1])
+        self.ret_labels = fluid.layers.reshape(x=self.labels[0], shape=[-1, 1])
         return [self.ret_labels, self.ret_infers, self.seq_len]
 
     def _build_env_end_event(self):
@@ -922,7 +947,7 @@ class SequenceLabelTask(BasicTask):
     def feed_list(self):
         feed_list = [varname for varname in self._base_feed_list]
         if self.is_train_phase or self.is_test_phase:
-            feed_list += [self.label.name, self.seq_len.name]
+            feed_list += [self.labels[0].name, self.seq_len.name]
         else:
             feed_list += [self.seq_len.name]
         return feed_list
@@ -938,10 +963,10 @@ class SequenceLabelTask(BasicTask):
 
 class MultiLabelClassifierTask(ClassifierTask):
     def __init__(self,
-                 data_reader,
                  feature,
                  num_classes,
                  feed_list,
+                 data_reader,
                  startup_program=None,
                  config=None,
                  hidden_units=None):
@@ -990,10 +1015,11 @@ class MultiLabelClassifierTask(ClassifierTask):
     def _add_label(self):
         label = fluid.layers.data(
             name="label", shape=[self.num_classes], dtype='int64')
-        return label
+        return [label]
 
     def _add_loss(self):
-        label_split = fluid.layers.split(self.label, self.num_classes, dim=-1)
+        label_split = fluid.layers.split(
+            self.labels[0], self.num_classes, dim=-1)
         total_loss = fluid.layers.fill_constant(
             shape=[1], value=0.0, dtype='float64')
         for index, probs in enumerate(self.outputs):
@@ -1004,7 +1030,8 @@ class MultiLabelClassifierTask(ClassifierTask):
         return loss
 
     def _add_metrics(self):
-        label_split = fluid.layers.split(self.label, self.num_classes, dim=-1)
+        label_split = fluid.layers.split(
+            self.labels[0], self.num_classes, dim=-1)
         # metrics change to auc of every class
         eval_list = []
         for index, probs in enumerate(self.outputs):

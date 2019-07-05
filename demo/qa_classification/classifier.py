@@ -14,44 +14,41 @@
 # limitations under the License.
 """Finetuning on classification task """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import argparse
 import ast
-import numpy as np
-import os
-import time
 
-import paddle
 import paddle.fluid as fluid
 import paddlehub as hub
 
 # yapf: disable
 parser = argparse.ArgumentParser(__doc__)
-parser.add_argument("--checkpoint_dir", type=str, default=None, help="Directory to model checkpoint")
-parser.add_argument("--batch_size",     type=int,   default=1, help="Total examples' number in batch for training.")
-parser.add_argument("--max_seq_len", type=int, default=512, help="Number of words of the longest seqence.")
+parser.add_argument("--num_epoch", type=int, default=3, help="Number of epoches for fine-tuning.")
 parser.add_argument("--use_gpu", type=ast.literal_eval, default=False, help="Whether use GPU for finetuning, input should be True or False")
+parser.add_argument("--learning_rate", type=float, default=5e-5, help="Learning rate used to train with warmup.")
+parser.add_argument("--weight_decay", type=float, default=0.01, help="Weight decay rate for L2 regularizer.")
+parser.add_argument("--warmup_proportion", type=float, default=0.0, help="Warmup proportion params for warmup strategy")
+parser.add_argument("--checkpoint_dir", type=str, default=None, help="Directory to model checkpoint")
+parser.add_argument("--max_seq_len", type=int, default=512, help="Number of words of the longest seqence.")
+parser.add_argument("--batch_size", type=int, default=32, help="Total examples' number in batch for training.")
 parser.add_argument("--use_pyreader", type=ast.literal_eval, default=False, help="Whether use pyreader to feed data.")
+parser.add_argument("--use_data_parallel", type=ast.literal_eval, default=False, help="Whether use data parallel.")
 args = parser.parse_args()
 # yapf: enable.
 
 if __name__ == '__main__':
-    # loading Paddlehub ERNIE pretrained model
+    # Load Paddlehub ERNIE pretrained model
     module = hub.Module(name="ernie")
-    inputs, outputs, program = module.context(max_seq_len=args.max_seq_len)
+    # module = hub.Module(name="bert_chinese_L-12_H-768_A-12")
+    inputs, outputs, program = module.context(
+        trainable=True, max_seq_len=args.max_seq_len)
 
-    # Sentence classification  dataset reader
-    dataset = hub.dataset.ChnSentiCorp()
+    # Download dataset and use ClassifyReader to read dataset
+    dataset = hub.dataset.NLPCC_DBQA()
+
     reader = hub.reader.ClassifyReader(
         dataset=dataset,
         vocab_path=module.get_vocab_path(),
         max_seq_len=args.max_seq_len)
-
-    place = fluid.CUDAPlace(0) if args.use_gpu else fluid.CPUPlace()
-    exe = fluid.Executor(place)
 
     # Construct transfer learning network
     # Use "pooled_output" for classification tasks on an entire sentence.
@@ -67,15 +64,21 @@ if __name__ == '__main__':
         inputs["input_mask"].name,
     ]
 
+    # Select finetune strategy, setup config and finetune
+    strategy = hub.AdamWeightDecayStrategy(
+        weight_decay=args.weight_decay,
+        learning_rate=args.learning_rate,
+        lr_scheduler="linear_decay")
+
     # Setup runing config for PaddleHub Finetune API
     config = hub.RunConfig(
-        use_data_parallel=False,
+        use_data_parallel=args.use_data_parallel,
         use_pyreader=args.use_pyreader,
         use_cuda=args.use_gpu,
+        num_epoch=args.num_epoch,
         batch_size=args.batch_size,
-        enable_memory_optim=False,
         checkpoint_dir=args.checkpoint_dir,
-        strategy=hub.finetune.strategy.DefaultFinetuneStrategy())
+        strategy=strategy)
 
     # Define a classfication finetune task by PaddleHub's API
     cls_task = hub.TextClassifierTask(
@@ -85,23 +88,6 @@ if __name__ == '__main__':
         num_classes=dataset.num_labels,
         config=config)
 
-    # Data to be prdicted
-    data = [
-        ["这个宾馆比较陈旧了，特价的房间也很一般。总体来说一般"], ["交通方便；环境很好；服务态度很好 房间较小"],
-        [
-            "还稍微重了点，可能是硬盘大的原故，还要再轻半斤就好了。其他要进一步验证。贴的几种膜气泡较多，用不了多久就要更换了，屏幕膜稍好点，但比没有要强多了。建议配赠几张膜让用用户自己贴。"
-        ],
-        [
-            "前台接待太差，酒店有A B楼之分，本人check－in后，前台未告诉B楼在何处，并且B楼无明显指示；房间太小，根本不像4星级设施，下次不会再选择入住此店啦"
-        ], ["19天硬盘就罢工了~~~算上运来的一周都没用上15天~~~可就是不能换了~~~唉~~~~你说这算什么事呀~~~"]
-    ]
-
-    index = 0
-    run_states = cls_task.predict(data=data)
-    results = [run_state.run_results for run_state in run_states]
-    for batch_result in results:
-        # get predict index
-        batch_result = np.argmax(batch_result, axis=2)[0]
-        for result in batch_result:
-            print("%s\tpredict=%s" % (data[index][0], result))
-            index += 1
+    # Finetune and evaluate by PaddleHub's API
+    # will finish training, evaluation, testing, save model automatically
+    cls_task.finetune_and_eval()

@@ -29,6 +29,7 @@ import paddle
 
 from paddlehub.reader import tokenization
 from paddlehub.common.logger import logger
+from paddlehub.common.utils import sys_stdout_encoding
 from paddlehub.dataset.dataset import InputExample
 from .batching import pad_batch_data
 import paddlehub as hub
@@ -381,7 +382,7 @@ class SequenceLabelReader(BaseReader):
                     sub_label = "I-" + label[2:]
                 ret_labels.extend([sub_label] * (len(sub_token) - 1))
 
-            if len(ret_tokens) != len(labels):
+            if len(ret_tokens) != len(ret_labels):
                 raise ValueError(
                     "The length of ret_tokens can't match with labels")
             return ret_tokens, ret_labels
@@ -527,7 +528,7 @@ class LACClassifyReader(object):
             ]
             if len(processed) == 0:
                 if six.PY2:
-                    text = text.encode(sys.stdout.encoding)
+                    text = text.encode(sys_stdout_encoding())
                 logger.warning(
                     "The words in text %s can't be found in the vocabulary." %
                     (text))

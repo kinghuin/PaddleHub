@@ -45,8 +45,8 @@ class InputExample(object):
         if self.text_b is None:
             return "text={}\tlabel={}".format(self.text_a, self.label)
         else:
-            return "text_a={}\ttext_b{},label={}".format(
-                self.text_a, self.text_b, label)
+            return "text_a={}\ttext_b={},label={}".format(
+                self.text_a, self.text_b, self.label)
 
 
 class HubDataset(object):

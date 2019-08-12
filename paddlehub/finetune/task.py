@@ -520,8 +520,10 @@ class BasicTask(object):
                 self.save_checkpoint()
 
                 # Final evaluation
-                self.eval(phase="dev")
-                self.eval(phase="test")
+                if self._base_data_reader.get_dev_examples() != []:
+                    self.eval(phase="dev")
+                if self._base_data_reader.get_test_examples() != []:
+                    self.eval(phase="test")
 
             self._finetune_end_event(run_states)
             return run_states
@@ -600,6 +602,7 @@ class BasicTask(object):
 
     def _run_with_py_reader(self, do_eval=False):
         flag = False
+        use_data_parallel_backup = self.config.use_data_parallel
         while True:
             global_run_states = []
             period_run_states = []
@@ -644,7 +647,6 @@ class BasicTask(object):
                     self.config._use_data_parallel = use_data_parallel_backup
                 elif len(global_run_states) == 0:
                     flag = True
-                    use_data_parallel_backup = self.config.use_data_parallel
                     self.config._use_data_parallel = False
                     continue
                 break

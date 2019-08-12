@@ -12,12 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
 import six
+
+os.environ["FLAGS_eager_delete_tensor_gb"] = "0.0"
 
 if six.PY2:
     import sys
-    reload(sys)
+    reload(sys)  # noqa
     sys.setdefaultencoding("UTF-8")
 
 from . import module

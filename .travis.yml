@@ -1,10 +1,17 @@
 language: python
 
-before_install: pip install flake8
+python:
+  - '2.7'
+  - '3.5'
+  - '3.6'
 
-before_script: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+env:
+  - PYTHONPATH=${PWD}
 
-script: /bin/bash ./scripts/check_code_style.sh
+script:
+  - if [[ $TRAVIS_PYTHON_VERSION != 2.7 ]]; then /bin/bash ./scripts/check_code_style.sh; fi
+  - pip install paddlepaddle; /bin/bash ./scripts/test_cml.sh
+  - /bin/bash ./scripts/test_all_module.sh
 
 notifications:
   email:

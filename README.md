@@ -7,7 +7,7 @@
 PaddleHub是基于PaddlePaddle生态下的预训练模型管理和迁移学习工具，可以结合预训练模型更便捷地开展迁移学习工作。通过PaddleHub，您可以：
 
 * 便捷地获取PaddlePaddle生态下的所有预训练模型，涵盖了图像分类、目标检测、词法分析、语义模型、情感分析、语言模型、视频分类、图像生成八类主流模型。
-  * 更多详情可查看官网：http://hub.paddlepaddle.org.cn 
+  * 更多详情可查看官网：http://hub.paddlepaddle.org.cn
 * 通过PaddleHub Fine-tune API，结合少量代码即可完成**大规模预训练模型**的迁移学习，具体Demo可参考以下链接：
   * [文本分类](https://github.com/PaddlePaddle/PaddleHub/tree/release/v1.0.0/demo/text-classification)
   * [序列标注](https://github.com/PaddlePaddle/PaddleHub/tree/release/v1.0.0/demo/sequence-labeling)
@@ -22,6 +22,11 @@ PaddleHub是基于PaddlePaddle生态下的预训练模型管理和迁移学习�
 * PaddlePaddle>=1.4.0
 
 除上述依赖外，PaddleHub的预训练模型和预置数据集需要连接服务端进行下载，请确保机器可以正常访问网络
+
+## 答疑
+
+当安装或者使用遇到问题时，可以通过[FAQ](https://github.com/PaddlePaddle/PaddleHub/wiki/PaddleHub-FAQ)查找解决方案。
+如果在FAQ中没有找到解决方案，欢迎您将问题和bug报告以[Github Issues](https://github.com/PaddlePaddle/PaddleHub/issues)的形式提交给我们，我们会第一时间进行跟进
 
 ## 安装
 pip安装方式如下：
@@ -73,25 +78,20 @@ $ hub run faster_rcnn_coco2017 --input_path test_object_detection.jpg
 ## 在线体验
 我们在AI Studio和AIBook上提供了IPython NoteBook形式的demo，您可以直接在平台上在线体验，链接如下：
 * ERNIE文本分类:
-  * [AI Studio](https://aistudio.baidu.com/aistudio/projectDetail/79380) 
+  * [AI Studio](https://aistudio.baidu.com/aistudio/projectDetail/79380)
   * [AIBook](https://console.bce.baidu.com/bml/?_=1562072915183#/bml/aibook/ernie_txt_cls)
 * ERNIE序列标注:
-  * [AI Studio](https://aistudio.baidu.com/aistudio/projectDetail/79377) 
+  * [AI Studio](https://aistudio.baidu.com/aistudio/projectDetail/79377)
   * [AIBook](https://console.bce.baidu.com/bml/?_=1562072915183#/bml/aibook/ernie_seq_label)
 * ELMo文本分类:
-  * [AI Studio](https://aistudio.baidu.com/aistudio/projectDetail/79400) 
+  * [AI Studio](https://aistudio.baidu.com/aistudio/projectDetail/79400)
   * [AIBook](https://console.bce.baidu.com/bml/#/bml/aibook/elmo_txt_cls)
 * senta情感分类:
-  * [AI Studio](https://aistudio.baidu.com/aistudio/projectDetail/79398) 
+  * [AI Studio](https://aistudio.baidu.com/aistudio/projectDetail/79398)
   * [AIBook](https://console.bce.baidu.com/bml/#/bml/aibook/senta_bilstm)
-* 图像分类: 
-  * [AI Studio](https://aistudio.baidu.com/aistudio/projectDetail/79378) 
+* 图像分类:
+  * [AI Studio](https://aistudio.baidu.com/aistudio/projectDetail/79378)
   * [AIBook](https://console.bce.baidu.com/bml/#/bml/aibook/img_cls)
-
-## 答疑
-
-当安装或者使用遇到问题时，可以通过[FAQ](https://github.com/PaddlePaddle/PaddleHub/wiki/PaddleHub-FAQ)查找解决方案。
-如果在FAQ中没有找到解决方案，欢迎您将问题和bug报告以[Github Issues](https://github.com/PaddlePaddle/PaddleHub/issues)的形式提交给我们，我们会第一时间进行跟进
 
 ## 版权和许可证
 PaddleHub由[Apache-2.0 license](LICENSE)提供

@@ -15,8 +15,10 @@
 import os
 import requests
 import time
+import paddle
 
 from random import randint, seed
+
 from paddlehub import version
 from paddlehub.common.server_config import default_stat_config
 
@@ -27,14 +29,37 @@ def get_stat_server():
     if stat_env:
         server_list = stat_env.split(';')
     else:
-        server_list = default_stat_config
+        server_list = default_stat_config['server_list']
     return server_list[randint(0, len(server_list) - 1)]
 
 
 def hub_stat(argv):
     try:
-        params = {'command': ' '.join(argv), 'version': version.hub_version}
+        params = {
+            'command': ' '.join(argv),
+            'hub_version': version.hub_version,
+            'paddle_version': paddle.__version__
+        }
         stat_api = get_stat_server()
         r = requests.get(stat_api, params=params, timeout=0.5)
     except:
         pass
+
+
+def uri_path(server_url, api):
+    srv = server_url
+    if server_url.endswith('/'):
+        srv = server_url[:-1]
+    if api.startswith('/'):
+        srv += api
+    else:
+        api = '/' + api
+        srv += api
+    return srv
+
+
+def hub_request(api, params):
+    params['hub_version'] = version.hub_version
+    params['paddle_version'] = paddle.__version__
+    r = requests.get(api, params)
+    return r.json()

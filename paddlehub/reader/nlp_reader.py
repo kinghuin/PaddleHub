@@ -42,7 +42,8 @@ class BaseReader(object):
                  label_map_config=None,
                  max_seq_len=512,
                  do_lower_case=True,
-                 random_seed=None):
+                 random_seed=None,
+                 use_task_id=False):
         self.max_seq_len = max_seq_len
         self.tokenizer = tokenization.FullTokenizer(
             vocab_file=vocab_path, do_lower_case=do_lower_case)
@@ -52,6 +53,10 @@ class BaseReader(object):
         self.cls_id = self.vocab["[CLS]"]
         self.sep_id = self.vocab["[SEP]"]
         self.in_tokens = False
+        self.use_task_id = use_task_id
+
+        if self.use_task_id:
+            self.task_id = 0
 
         np.random.seed(random_seed)
 
@@ -232,7 +237,6 @@ class BaseReader(object):
                        phase='train',
                        shuffle=True,
                        data=None):
-
         if phase == 'train':
             shuffle = True
             examples = self.get_train_examples()
@@ -252,7 +256,7 @@ class BaseReader(object):
 
             for item in data:
                 # set label in order to run the program
-                label = "0"
+                label = list(self.label_map.keys())[0]
                 if len(item) == 1:
                     item_i = InputExample(
                         guid=seq_id, text_a=item[0], label=label)
@@ -313,12 +317,27 @@ class ClassifyReader(BaseReader):
                 padded_token_ids, padded_position_ids, padded_text_type_ids,
                 input_mask, batch_labels
             ]
+
+            if self.use_task_id:
+                padded_task_ids = np.ones_like(
+                    padded_token_ids, dtype="int64") * self.task_id
+                return_list = [
+                    padded_token_ids, padded_position_ids, padded_text_type_ids,
+                    input_mask, padded_task_ids, batch_labels
+                ]
         else:
             return_list = [
                 padded_token_ids, padded_position_ids, padded_text_type_ids,
                 input_mask
             ]
 
+            if self.use_task_id:
+                padded_task_ids = np.ones_like(
+                    padded_token_ids, dtype="int64") * self.task_id
+                return_list = [
+                    padded_token_ids, padded_position_ids, padded_text_type_ids,
+                    input_mask, padded_task_ids
+                ]
         return return_list
 
 
@@ -355,11 +374,30 @@ class SequenceLabelReader(BaseReader):
                 padded_token_ids, padded_position_ids, padded_text_type_ids,
                 input_mask, padded_label_ids, batch_seq_lens
             ]
+
+            if self.use_task_id:
+                padded_task_ids = np.ones_like(
+                    padded_token_ids, dtype="int64") * self.task_id
+                return_list = [
+                    padded_token_ids, padded_position_ids, padded_text_type_ids,
+                    input_mask, padded_task_ids, padded_label_ids,
+                    batch_seq_lens
+                ]
+
         else:
             return_list = [
                 padded_token_ids, padded_position_ids, padded_text_type_ids,
                 input_mask, batch_seq_lens
             ]
+
+            if self.use_task_id:
+                padded_task_ids = np.ones_like(
+                    padded_token_ids, dtype="int64") * self.task_id
+                return_list = [
+                    padded_token_ids, padded_position_ids, padded_text_type_ids,
+                    input_mask, padded_task_ids, batch_seq_lens
+                ]
+
         return return_list
 
     def _reseg_token_label(self, tokens, tokenizer, phase, labels=None):
@@ -585,11 +623,27 @@ class MultiLabelClassifyReader(BaseReader):
                 padded_token_ids, padded_position_ids, padded_text_type_ids,
                 input_mask, batch_labels
             ]
+
+            if self.use_task_id:
+                padded_task_ids = np.ones_like(
+                    padded_token_ids, dtype="int64") * self.task_id
+                return_list = [
+                    padded_token_ids, padded_position_ids, padded_text_type_ids,
+                    input_mask, padded_task_ids, batch_labels
+                ]
         else:
             return_list = [
                 padded_token_ids, padded_position_ids, padded_text_type_ids,
                 input_mask
             ]
+
+            if self.use_task_id:
+                padded_task_ids = np.ones_like(
+                    padded_token_ids, dtype="int64") * self.task_id
+                return_list = [
+                    padded_token_ids, padded_position_ids, padded_text_type_ids,
+                    input_mask, padded_task_ids
+                ]
         return return_list
 
     def _convert_example_to_record(self,
@@ -638,8 +692,11 @@ class MultiLabelClassifyReader(BaseReader):
         position_ids = list(range(len(token_ids)))
 
         label_ids = []
-        for label in example.label:
-            label_ids.append(int(label))
+        if phase == "predict":
+            label_ids = [0, 0, 0, 0, 0, 0]
+        else:
+            for label in example.label:
+                label_ids.append(int(label))
 
         if phase != "predict":
             Record = namedtuple(

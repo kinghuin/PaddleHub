@@ -93,18 +93,6 @@ def get_depth_parameter(main_program):
             op_depth_dict[op] = get_parentOp_depth_max(parent_ops,
                                                        op_depth_dict) + 1
 
-#     depth_ops_dict = {}
-#     for op, depth in op_depth_dict.items():
-#         if depth not in depth_ops_dict.keys():
-#             depth_ops_dict[depth] = []
-#         depth_ops_dict[depth].append(op)
-
-#     print(len(depth_ops_dict[1]))
-#     for index in range(1, 20):
-#         print("%"*50)
-#         for op in depth_ops_dict[index]:
-#             print(op.type)
-#             print(op.input_arg_names)
     depth_params_dict = {}
     updated_depth_params_dict = {}
     for param in global_block.iter_parameters():
@@ -117,50 +105,22 @@ def get_depth_parameter(main_program):
         updated_depth_params_dict[depth].append(param)
 
     depth_list = sorted(depth_params_dict.keys())
-    #print(depth_list)
     len_depth_list = len(depth_list)
-    # updated_depth_params_dict = copy.deepcopy(depth_params_dict)
     for index, depth in enumerate(depth_list):
         for param in depth_params_dict[depth]:
             prefix = param.name.split(".")[0]
             if index < len_depth_list - 1:
                 next_depth = depth_list[index + 1]
-                #print(next_depth)
-                # print(depth_params_dict[next_depth])
                 for param_next_depth in depth_params_dict[next_depth]:
                     prefix_next_depth = param_next_depth.name.split(".")[0]
                     if prefix == prefix_next_depth:
-                        #print("#"*10, depth)
                         updated_depth_params_dict[depth].append(
                             param_next_depth)
                         updated_depth_params_dict[next_depth].remove(
                             param_next_depth)
 
                         if not updated_depth_params_dict[next_depth]:
-                            #print("*"*10,next_depth )
                             updated_depth_params_dict.pop(next_depth)
-
-
-#     for index in sorted(depth_params_dict.keys()):
-#         print(index, end = ":")
-#         for param in depth_params_dict[index]:
-#             print(param.name, end = " ")
-#         print()
-
-#     print("#"*100)
-#     for index in sorted(updated_depth_params_dict.keys()):
-#         print(index, end = ":")
-#         for param in updated_depth_params_dict[index]:
-#             print(param.name, end = " ")
-#         print()
-#     print(len(depth_params_dict))
-#     print(len(updated_depth_params_dict))
-
-#     for index in range(1, len(depth_params_dict) + 1):
-#         print(depth_params_dict[index])
-#     for key, value in sorted(depth_params_dict.keys()):
-#         print(key)
-#     exit()
 
     return updated_depth_params_dict
 
@@ -172,17 +132,8 @@ def set_discriminative_learning_rate(main_program,
     depth_params_dict = get_depth_parameter(main_program)
 
     sorted_depth = sorted(depth_params_dict.keys(), reverse=True)
-
-#     for depth, params in depth_params_dict.items():
-#         for param in params:
-#             print(depth, param.optimize_attr)
-#         print("$$$"*10)
-#     exit()
-
-    
     _num_layers = math.ceil(len(sorted_depth) / num_abstract_blocks)
-    
-    
+
     power = 1
     cnt = 0
     for depth in sorted_depth:
@@ -195,7 +146,7 @@ def set_discriminative_learning_rate(main_program,
         cnt += 1
         if cnt >= _num_layers:
             power += 1
-            cnt =0
+            cnt = 0
 
 
 def set_gradual_unfreeze(main_program, unfreeze_depths):
@@ -470,16 +421,6 @@ class SlantedTriangleLRFineTuneStrategy(DefaultStrategy):
     @property
     def max_learning_rate(self):
         return self._max_learning_rate
-
-
-#     def slanted_triangle_learning_rate_optimization(loss, cut_step, max_train_step,
-#                                                     max_learning_rate, ratio, main_program):
-#         scheduled_lr = slanted_triangle_learning_rate_decay(
-#         cut_step, max_train_step, max_learning_rate, ratio, main_program)
-#         optimizer = fluid.optimizer.Adam(learning_rate=scheduled_lr)
-#         optimizer.minimize(loss)
-
-#     return scheduled_lr
 
     def execute(self, loss, data_reader, config):
         self.main_program = loss.block.program

@@ -18,6 +18,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import math
 import multiprocessing
 
 import paddle.fluid as fluid
@@ -118,7 +119,6 @@ def get_depth_parameter(main_program):
     depth_list = sorted(depth_params_dict.keys())
     #print(depth_list)
     len_depth_list = len(depth_list)
-    print(len_depth_list)
     # updated_depth_params_dict = copy.deepcopy(depth_params_dict)
     for index, depth in enumerate(depth_list):
         for param in depth_params_dict[depth]:
@@ -167,30 +167,35 @@ def get_depth_parameter(main_program):
 
 def set_discriminative_learning_rate(main_program,
                                      max_learning_rate,
+                                     num_abstract_blocks=3,
                                      lr_factor=2.6):
     depth_params_dict = get_depth_parameter(main_program)
 
     sorted_depth = sorted(depth_params_dict.keys(), reverse=True)
 
-    #     for depth, params in depth_params_dict.items():
-    #         for param in params:
-    #             print(depth, param.optimize_attr)
-    #         print("$$$"*10)
+#     for depth, params in depth_params_dict.items():
+#         for param in params:
+#             print(depth, param.optimize_attr)
+#         print("$$$"*10)
+#     exit()
 
+    
+    _num_layers = math.ceil(len(sorted_depth) / num_abstract_blocks)
+    
+    
     power = 1
+    cnt = 0
     for depth in sorted_depth:
         for index, param in enumerate(depth_params_dict[depth]):
-            print(depth, param.optimize_attr)
-            print("@@@" * 10)
             if depth_params_dict[depth][index].optimize_attr[
                     "learning_rate"] == 1.0:
                 depth_params_dict[depth][index].optimize_attr[
                     "learning_rate"] = pow(1.0 / lr_factor, power)
             print(depth, param.optimize_attr)
-            print("###" * 10)
-        print("$$$" * 10)
-        power += 1
-    #exit()
+        cnt += 1
+        if cnt >= _num_layers:
+            power += 1
+            cnt =0
 
 
 def set_gradual_unfreeze(main_program, unfreeze_depths):
@@ -303,6 +308,9 @@ class DefaultStrategy(object):
     # TODO complete __str__()
     def __str__(self):
         return "DefaultStrategy"
+
+    def step(self):
+        pass
 
 
 class AdamWeightDecayStrategy(DefaultStrategy):
@@ -445,7 +453,7 @@ class SlantedTriangleLRFineTuneStrategy(DefaultStrategy):
 
         if max_depth > 0:
             set_gradual_unfreeze(
-                main_program, unfreeze_depths=sorted_depth[:self.epoch])
+                self.main_program, unfreeze_depths=sorted_depth[:self.epoch])
         else:
             logger.warning(
                 "The max op-depth in the network is %s. That results in that can't use the gradual unfreeze finetune strategy."
@@ -473,14 +481,14 @@ class SlantedTriangleLRFineTuneStrategy(DefaultStrategy):
 
 #     return scheduled_lr
 
-    def execute(self, loss, main_program, data_reader, config):
-        self.main_program = main_program
+    def execute(self, loss, data_reader, config):
+        self.main_program = loss.block.program
         num_train_examples = data_reader.dataset.num_examples["train"]
         max_train_step = config.num_epoch * num_train_examples // config.batch_size
         cut_step = int(max_train_step * self.cut_fraction)
         scheduled_lr = slanted_triangle_learning_rate_decay(
             cut_step, max_train_step, self.max_learning_rate, self.ratio,
-            main_program)
+            self.main_program)
         self.optimizer = get_optimizer(self._optimizer_name, scheduled_lr)
         self.optimizer.minimize(loss)
 
@@ -503,10 +511,11 @@ class DiscriminativeLRFineTuneStrategy(DefaultStrategy):
     def max_learning_rate(self):
         return self._max_learning_rate
 
-    def execute(self, loss, main_program):
+    def execute(self, loss, data_reader=None, config=None):
+        main_program = loss.block.program
 
         set_discriminative_learning_rate(main_program, self.max_learning_rate,
-                                         self.lr_factor)
+                                         4, self.lr_factor)
 
         if self.optimizer is not None:
             self.optimizer.minimize(loss)

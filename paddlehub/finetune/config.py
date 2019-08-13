@@ -26,7 +26,6 @@ from paddlehub.common.logger import logger
 
 class RunConfig(object):
     """ This class specifies the configurations for PaddleHub to finetune """
-
     def __init__(self,
                  log_interval=10,
                  eval_interval=100,
@@ -37,6 +36,7 @@ class RunConfig(object):
                  checkpoint_dir=None,
                  num_epoch=1,
                  batch_size=32,
+                 max_seq_len=128,
                  enable_memory_optim=True,
                  strategy=None):
         """ Construct finetune Config """
@@ -49,6 +49,7 @@ class RunConfig(object):
         self._batch_size = batch_size
         self._use_pyreader = use_pyreader
         self._use_data_parallel = use_data_parallel
+        self._max_seq_len = max_seq_len
         if strategy is None:
             self._strategy = DefaultStrategy()
         else:
@@ -90,6 +91,10 @@ class RunConfig(object):
     @property
     def batch_size(self):
         return self._batch_size
+
+    @property
+    def max_seq_len(self):
+        return self._max_seq_len
 
     @property
     def strategy(self):

@@ -1,4 +1,4 @@
-#coding:utf-8
+# coding:utf-8
 #   Copyright (c) 2019 PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,17 +43,19 @@ class BaseReader(object):
                  max_seq_len=512,
                  do_lower_case=True,
                  random_seed=None,
-                 use_task_id=False):
+                 use_task_id=False,
+                 in_tokens=False):
         self.max_seq_len = max_seq_len
-        self.tokenizer = tokenization.FullTokenizer(
-            vocab_file=vocab_path, do_lower_case=do_lower_case)
+        self.tokenizer = tokenization.FullTokenizer(vocab_file=vocab_path,
+                                                    do_lower_case=do_lower_case)
         self.vocab = self.tokenizer.vocab
         self.dataset = dataset
         self.pad_id = self.vocab["[PAD]"]
         self.cls_id = self.vocab["[CLS]"]
         self.sep_id = self.vocab["[SEP]"]
-        self.in_tokens = False
+        self.in_tokens = in_tokens
         self.use_task_id = use_task_id
+        self.testflag = 0
 
         if self.use_task_id:
             self.task_id = 0
@@ -118,7 +120,7 @@ class BaseReader(object):
         tokens_a = tokenizer.tokenize(text_a)
         tokens_b = None
         if example.text_b is not None:
-            #if "text_b" in example._fields:
+            # if "text_b" in example._fields:
             text_b = tokenization.convert_to_unicode(example.text_b)
             tokens_b = tokenizer.tokenize(text_b)
 
@@ -172,8 +174,8 @@ class BaseReader(object):
 
         if self.label_map:
             if example.label not in self.label_map:
-                raise KeyError(
-                    "example.label = {%s} not in label" % example.label)
+                raise KeyError("example.label = {%s} not in label" %
+                               example.label)
             label_id = self.label_map[example.label]
         else:
             label_id = example.label
@@ -187,18 +189,16 @@ class BaseReader(object):
                 'Record',
                 ['token_ids', 'text_type_ids', 'position_ids', 'label_id'])
 
-            record = Record(
-                token_ids=token_ids,
-                text_type_ids=text_type_ids,
-                position_ids=position_ids,
-                label_id=label_id)
+            record = Record(token_ids=token_ids,
+                            text_type_ids=text_type_ids,
+                            position_ids=position_ids,
+                            label_id=label_id)
         else:
             Record = namedtuple('Record',
                                 ['token_ids', 'text_type_ids', 'position_ids'])
-            record = Record(
-                token_ids=token_ids,
-                text_type_ids=text_type_ids,
-                position_ids=position_ids)
+            record = Record(token_ids=token_ids,
+                            text_type_ids=text_type_ids,
+                            position_ids=position_ids)
 
         return record
 
@@ -261,14 +261,14 @@ class BaseReader(object):
                 # set label in order to run the program
                 label = list(self.label_map.keys())[0]
                 if len(item) == 1:
-                    item_i = InputExample(
-                        guid=seq_id, text_a=item[0], label=label)
+                    item_i = InputExample(guid=seq_id,
+                                          text_a=item[0],
+                                          label=label)
                 elif len(item) == 2:
-                    item_i = InputExample(
-                        guid=seq_id,
-                        text_a=item[0],
-                        text_b=item[1],
-                        label=label)
+                    item_i = InputExample(guid=seq_id,
+                                          text_a=item[0],
+                                          text_b=item[1],
+                                          label=label)
                 else:
                     raise ValueError(
                         "The length of input_text is out of handling, which must be 1 or 2!"
@@ -284,8 +284,9 @@ class BaseReader(object):
             if shuffle:
                 np.random.shuffle(examples)
 
-            for batch_data in self._prepare_batch_data(
-                    examples, batch_size, phase=phase):
+            for batch_data in self._prepare_batch_data(examples,
+                                                       batch_size,
+                                                       phase=phase):
                 yield [batch_data]
 
         return wrapper
@@ -302,14 +303,12 @@ class ClassifyReader(BaseReader):
             max_seq_len=self.max_seq_len,
             pad_idx=self.pad_id,
             return_input_mask=True)
-        padded_text_type_ids = pad_batch_data(
-            batch_text_type_ids,
-            max_seq_len=self.max_seq_len,
-            pad_idx=self.pad_id)
-        padded_position_ids = pad_batch_data(
-            batch_position_ids,
-            max_seq_len=self.max_seq_len,
-            pad_idx=self.pad_id)
+        padded_text_type_ids = pad_batch_data(batch_text_type_ids,
+                                              max_seq_len=self.max_seq_len,
+                                              pad_idx=self.pad_id)
+        padded_position_ids = pad_batch_data(batch_position_ids,
+                                             max_seq_len=self.max_seq_len,
+                                             pad_idx=self.pad_id)
 
         if phase != "predict":
             batch_labels = [record.label_id for record in batch_records]
@@ -322,8 +321,8 @@ class ClassifyReader(BaseReader):
             ]
 
             if self.use_task_id:
-                padded_task_ids = np.ones_like(
-                    padded_token_ids, dtype="int64") * self.task_id
+                padded_task_ids = np.ones_like(padded_token_ids,
+                                               dtype="int64") * self.task_id
                 return_list = [
                     padded_token_ids, padded_position_ids, padded_text_type_ids,
                     input_mask, padded_task_ids, batch_labels
@@ -335,8 +334,8 @@ class ClassifyReader(BaseReader):
             ]
 
             if self.use_task_id:
-                padded_task_ids = np.ones_like(
-                    padded_token_ids, dtype="int64") * self.task_id
+                padded_task_ids = np.ones_like(padded_token_ids,
+                                               dtype="int64") * self.task_id
                 return_list = [
                     padded_token_ids, padded_position_ids, padded_text_type_ids,
                     input_mask, padded_task_ids
@@ -357,21 +356,18 @@ class SequenceLabelReader(BaseReader):
             max_seq_len=self.max_seq_len,
             return_input_mask=True,
             return_seq_lens=True)
-        padded_text_type_ids = pad_batch_data(
-            batch_text_type_ids,
-            max_seq_len=self.max_seq_len,
-            pad_idx=self.pad_id)
-        padded_position_ids = pad_batch_data(
-            batch_position_ids,
-            max_seq_len=self.max_seq_len,
-            pad_idx=self.pad_id)
+        padded_text_type_ids = pad_batch_data(batch_text_type_ids,
+                                              max_seq_len=self.max_seq_len,
+                                              pad_idx=self.pad_id)
+        padded_position_ids = pad_batch_data(batch_position_ids,
+                                             max_seq_len=self.max_seq_len,
+                                             pad_idx=self.pad_id)
 
         if phase != "predict":
             batch_label_ids = [record.label_ids for record in batch_records]
-            padded_label_ids = pad_batch_data(
-                batch_label_ids,
-                max_seq_len=self.max_seq_len,
-                pad_idx=len(self.label_map) - 1)
+            padded_label_ids = pad_batch_data(batch_label_ids,
+                                              max_seq_len=self.max_seq_len,
+                                              pad_idx=len(self.label_map) - 1)
 
             return_list = [
                 padded_token_ids, padded_position_ids, padded_text_type_ids,
@@ -379,8 +375,8 @@ class SequenceLabelReader(BaseReader):
             ]
 
             if self.use_task_id:
-                padded_task_ids = np.ones_like(
-                    padded_token_ids, dtype="int64") * self.task_id
+                padded_task_ids = np.ones_like(padded_token_ids,
+                                               dtype="int64") * self.task_id
                 return_list = [
                     padded_token_ids, padded_position_ids, padded_text_type_ids,
                     input_mask, padded_task_ids, padded_label_ids,
@@ -394,8 +390,8 @@ class SequenceLabelReader(BaseReader):
             ]
 
             if self.use_task_id:
-                padded_task_ids = np.ones_like(
-                    padded_token_ids, dtype="int64") * self.task_id
+                padded_task_ids = np.ones_like(padded_token_ids,
+                                               dtype="int64") * self.task_id
                 return_list = [
                     padded_token_ids, padded_position_ids, padded_text_type_ids,
                     input_mask, padded_task_ids, batch_seq_lens
@@ -449,8 +445,10 @@ class SequenceLabelReader(BaseReader):
 
         if phase != "predict":
             labels = tokenization.convert_to_unicode(example.label).split(u"")
-            tokens, labels = self._reseg_token_label(
-                tokens=tokens, labels=labels, tokenizer=tokenizer, phase=phase)
+            tokens, labels = self._reseg_token_label(tokens=tokens,
+                                                     labels=labels,
+                                                     tokenizer=tokenizer,
+                                                     phase=phase)
 
             if len(tokens) > max_seq_length - 2:
                 tokens = tokens[0:(max_seq_length - 2)]
@@ -468,14 +466,14 @@ class SequenceLabelReader(BaseReader):
             Record = namedtuple(
                 'Record',
                 ['token_ids', 'text_type_ids', 'position_ids', 'label_ids'])
-            record = Record(
-                token_ids=token_ids,
-                text_type_ids=text_type_ids,
-                position_ids=position_ids,
-                label_ids=label_ids)
+            record = Record(token_ids=token_ids,
+                            text_type_ids=text_type_ids,
+                            position_ids=position_ids,
+                            label_ids=label_ids)
         else:
-            tokens = self._reseg_token_label(
-                tokens=tokens, tokenizer=tokenizer, phase=phase)
+            tokens = self._reseg_token_label(tokens=tokens,
+                                             tokenizer=tokenizer,
+                                             phase=phase)
 
             if len(tokens) > max_seq_length - 2:
                 tokens = tokens[0:(max_seq_length - 2)]
@@ -500,8 +498,8 @@ class LACClassifyReader(object):
     def __init__(self, dataset, vocab_path):
         self.dataset = dataset
         self.lac = hub.Module(name="lac")
-        self.tokenizer = tokenization.FullTokenizer(
-            vocab_file=vocab_path, do_lower_case=False)
+        self.tokenizer = tokenization.FullTokenizer(vocab_file=vocab_path,
+                                                    do_lower_case=False)
         self.vocab = self.tokenizer.vocab
         self.feed_key = list(
             self.lac.processor.data_format(
@@ -607,14 +605,12 @@ class MultiLabelClassifyReader(BaseReader):
             pad_idx=self.pad_id,
             max_seq_len=self.max_seq_len,
             return_input_mask=True)
-        padded_text_type_ids = pad_batch_data(
-            batch_text_type_ids,
-            max_seq_len=self.max_seq_len,
-            pad_idx=self.pad_id)
-        padded_position_ids = pad_batch_data(
-            batch_position_ids,
-            max_seq_len=self.max_seq_len,
-            pad_idx=self.pad_id)
+        padded_text_type_ids = pad_batch_data(batch_text_type_ids,
+                                              max_seq_len=self.max_seq_len,
+                                              pad_idx=self.pad_id)
+        padded_position_ids = pad_batch_data(batch_position_ids,
+                                             max_seq_len=self.max_seq_len,
+                                             pad_idx=self.pad_id)
 
         if phase != "predict":
             batch_labels_ids = [record.label_ids for record in batch_records]
@@ -628,8 +624,8 @@ class MultiLabelClassifyReader(BaseReader):
             ]
 
             if self.use_task_id:
-                padded_task_ids = np.ones_like(
-                    padded_token_ids, dtype="int64") * self.task_id
+                padded_task_ids = np.ones_like(padded_token_ids,
+                                               dtype="int64") * self.task_id
                 return_list = [
                     padded_token_ids, padded_position_ids, padded_text_type_ids,
                     input_mask, padded_task_ids, batch_labels
@@ -641,8 +637,8 @@ class MultiLabelClassifyReader(BaseReader):
             ]
 
             if self.use_task_id:
-                padded_task_ids = np.ones_like(
-                    padded_token_ids, dtype="int64") * self.task_id
+                padded_task_ids = np.ones_like(padded_token_ids,
+                                               dtype="int64") * self.task_id
                 return_list = [
                     padded_token_ids, padded_position_ids, padded_text_type_ids,
                     input_mask, padded_task_ids
@@ -660,7 +656,7 @@ class MultiLabelClassifyReader(BaseReader):
         tokens_a = tokenizer.tokenize(text_a)
         tokens_b = None
         if example.text_b is not None:
-            #if "text_b" in example._fields:
+            # if "text_b" in example._fields:
             text_b = tokenization.convert_to_unicode(example.text_b)
             tokens_b = tokenizer.tokenize(text_b)
 
@@ -706,25 +702,22 @@ class MultiLabelClassifyReader(BaseReader):
                 'Record',
                 ['token_ids', 'text_type_ids', 'position_ids', 'label_ids'])
 
-            record = Record(
-                token_ids=token_ids,
-                text_type_ids=text_type_ids,
-                position_ids=position_ids,
-                label_ids=label_ids)
+            record = Record(token_ids=token_ids,
+                            text_type_ids=text_type_ids,
+                            position_ids=position_ids,
+                            label_ids=label_ids)
         else:
             Record = namedtuple('Record',
                                 ['token_ids', 'text_type_ids', 'position_ids'])
-            record = Record(
-                token_ids=token_ids,
-                text_type_ids=text_type_ids,
-                position_ids=position_ids)
+            record = Record(token_ids=token_ids,
+                            text_type_ids=text_type_ids,
+                            position_ids=position_ids)
 
         return record
 
 
 class SquadInputFeatures(object):
     """A single set of features of squad_data."""
-
     def __init__(self,
                  unique_id,
                  example_index,
@@ -761,8 +754,8 @@ class RegressionReader(BaseReader):
                  do_lower_case=True,
                  random_seed=None):
         self.max_seq_len = max_seq_len
-        self.tokenizer = tokenization.FullTokenizer(
-            vocab_file=vocab_path, do_lower_case=do_lower_case)
+        self.tokenizer = tokenization.FullTokenizer(vocab_file=vocab_path,
+                                                    do_lower_case=do_lower_case)
         self.vocab = self.tokenizer.vocab
         self.dataset = dataset
         self.pad_id = self.vocab["[PAD]"]
@@ -790,14 +783,12 @@ class RegressionReader(BaseReader):
             max_seq_len=self.max_seq_len,
             pad_idx=self.pad_id,
             return_input_mask=True)
-        padded_text_type_ids = pad_batch_data(
-            batch_text_type_ids,
-            max_seq_len=self.max_seq_len,
-            pad_idx=self.pad_id)
-        padded_position_ids = pad_batch_data(
-            batch_position_ids,
-            max_seq_len=self.max_seq_len,
-            pad_idx=self.pad_id)
+        padded_text_type_ids = pad_batch_data(batch_text_type_ids,
+                                              max_seq_len=self.max_seq_len,
+                                              pad_idx=self.pad_id)
+        padded_position_ids = pad_batch_data(batch_position_ids,
+                                             max_seq_len=self.max_seq_len,
+                                             pad_idx=self.pad_id)
 
         if phase != "predict":
             batch_labels = [record.label_id for record in batch_records]
@@ -843,14 +834,14 @@ class RegressionReader(BaseReader):
                 # set label in order to run the program
                 label = -1  # different from BaseReader
                 if len(item) == 1:
-                    item_i = InputExample(
-                        guid=seq_id, text_a=item[0], label=label)
+                    item_i = InputExample(guid=seq_id,
+                                          text_a=item[0],
+                                          label=label)
                 elif len(item) == 2:
-                    item_i = InputExample(
-                        guid=seq_id,
-                        text_a=item[0],
-                        text_b=item[1],
-                        label=label)
+                    item_i = InputExample(guid=seq_id,
+                                          text_a=item[0],
+                                          text_b=item[1],
+                                          label=label)
                 else:
                     raise ValueError(
                         "The length of input_text is out of handling, which must be 1 or 2!"
@@ -866,8 +857,9 @@ class RegressionReader(BaseReader):
             if shuffle:
                 np.random.shuffle(examples)
 
-            for batch_data in self._prepare_batch_data(
-                    examples, batch_size, phase=phase):
+            for batch_data in self._prepare_batch_data(examples,
+                                                       batch_size,
+                                                       phase=phase):
                 yield [batch_data]
 
         return wrapper
@@ -966,7 +958,7 @@ class ReadingComprehensionReader(object):
                 ] + labels
                 max_len = max(max_len, seq_len)
 
-                #max_len = max(max_len, len(token_ids))
+                # max_len = max(max_len, len(token_ids))
                 if in_tokens:
                     to_append = (len(batch) + 1) * max_len <= batch_size
                 else:
@@ -986,24 +978,23 @@ class ReadingComprehensionReader(object):
             if shuffle:
                 np.random.shuffle(examples)
             if phase == "train":
-                features = self.convert_examples_to_features(
-                    examples, is_training=True)
+                features = self.convert_examples_to_features(examples,
+                                                             is_training=True)
             else:
-                features = self.convert_examples_to_features(
-                    examples, is_training=False)
+                features = self.convert_examples_to_features(examples,
+                                                             is_training=False)
 
             for batch_data, total_token_num in batch_reader(
                     features, batch_size, self._in_tokens):
-                batch_data = prepare_batch_data(
-                    batch_data,
-                    total_token_num,
-                    self._max_seq_length,
-                    pad_id=self.pad_id,
-                    cls_id=self.cls_id,
-                    sep_id=self.sep_id,
-                    return_input_mask=True,
-                    return_max_len=False,
-                    return_num_token=False)
+                batch_data = prepare_batch_data(batch_data,
+                                                total_token_num,
+                                                self._max_seq_length,
+                                                pad_id=self.pad_id,
+                                                cls_id=self.cls_id,
+                                                sep_id=self.sep_id,
+                                                return_input_mask=True,
+                                                return_max_len=False,
+                                                return_num_token=False)
 
                 yield [batch_data]
 
@@ -1098,14 +1089,14 @@ class ReadingComprehensionReader(object):
                 input_mask = [1] * len(input_ids)
 
                 # Zero-pad up to the sequence length.
-                #while len(input_ids) < max_seq_length:
+                # while len(input_ids) < max_seq_length:
                 #  input_ids.append(0)
                 #  input_mask.append(0)
                 #  segment_ids.append(0)
 
-                #assert len(input_ids) == max_seq_length
-                #assert len(input_mask) == max_seq_length
-                #assert len(segment_ids) == max_seq_length
+                # assert len(input_ids) == max_seq_length
+                # assert len(input_mask) == max_seq_length
+                # assert len(segment_ids) == max_seq_length
 
                 start_position = None
                 end_position = None
@@ -1145,12 +1136,12 @@ class ReadingComprehensionReader(object):
                         "%d:%s" % (x, y)
                         for (x, y) in six.iteritems(token_is_max_context)
                     ]))
-                    logger.debug(
-                        "input_ids: %s" % " ".join([str(x) for x in input_ids]))
-                    logger.debug("input_mask: %s" % " ".join(
-                        [str(x) for x in input_mask]))
-                    logger.debug("segment_ids: %s" % " ".join(
-                        [str(x) for x in segment_ids]))
+                    logger.debug("input_ids: %s" %
+                                 " ".join([str(x) for x in input_ids]))
+                    logger.debug("input_mask: %s" %
+                                 " ".join([str(x) for x in input_mask]))
+                    logger.debug("segment_ids: %s" %
+                                 " ".join([str(x) for x in segment_ids]))
                     if is_training and example.is_impossible:
                         logger.debug("impossible example")
                     if is_training and not example.is_impossible:
@@ -1251,6 +1242,183 @@ class ReadingComprehensionReader(object):
                 best_span_index = span_index
 
         return cur_span_index == best_span_index
+
+
+class DialogReader(ClassifyReader):
+    def _convert_example_to_record(self,
+                                   example,
+                                   max_seq_length,
+                                   tokenizer,
+                                   phase=None):
+        """Converts a single `Example` into a single `Record`."""
+        _SUB_SEP = "[unused0]"
+
+        # For multi-turn dialogues like UDC, we define text_a = line[1:-1]
+        if isinstance(example.text_a, list):
+            tokens_a = []
+            for text_a in example.text_a:
+                if tokens_a:
+                    tokens_a.append(_SUB_SEP)
+                text_unicode = tokenization.convert_to_unicode(text_a)
+                tokens = tokenizer.tokenize(text_unicode)
+                tokens_a += tokens
+        else:
+            text_a = tokenization.convert_to_unicode(example.text_a)
+            tokens_a = tokenizer.tokenize(text_a)
+
+        tokens_b = None
+        if example.text_b is not None:
+            # if "text_b" in example._fields:
+            text_b = tokenization.convert_to_unicode(example.text_b)
+            tokens_b = tokenizer.tokenize(text_b)
+            tokens_b = tokens_b[:min(50, len(tokens_b))]
+
+        if tokens_b:
+            # Modifies `tokens_a` and `tokens_b` in place so that the total
+            # length is less than the specified length.
+            # Account for [CLS], [SEP], [SEP] with "- 3"
+            #             self._truncate_seq_pair(tokens_a, tokens_b, max_seq_length - 3)
+            if len(tokens_a) > max_seq_length - 3 - len(tokens_b):
+                tokens_a = tokens_a[len(tokens_a) - max_seq_length + 3 +
+                                    len(tokens_b):]
+        else:
+            # Account for [CLS] and [SEP] with "- 2"
+            if len(tokens_a) > max_seq_length - 2:
+                tokens_a = tokens_a[0:(max_seq_length - 2)]
+
+        # The convention in BERT/ERNIE is:
+        # (a) For multi-turn dialogues:
+        #  tokens:   [CLS] token11 token12 token13  [INNER_SEP] token11 token12 token13 [SEP]  token21 token22 token23 [SEP]
+        #  type_ids: 0     0       0    0     0       0            0       0       0      0       1       1      1      1
+        # (b) For single turn dialogues:
+        #  tokens:   [CLS] token11 token12 token13 [SEP]
+        #  type_ids: 0      0        0       0      0
+        #
+        # Where "type_ids" are used to indicate whether this is the first
+        # sequence or the second sequence. The embedding vectors for `type=0` and
+        # `type=1` were learned during pre-training and are added to the wordpiece
+        # embedding vector (and position vector). This is not *strictly* necessary
+        # since the [SEP] token unambiguously separates the sequences, but it makes
+        # it easier for the model to learn the concept of sequences. We use
+        # "[INNER_SEP]" to divide different turn dialogues.
+        #
+        # For classification tasks, the first vector (corresponding to [CLS]) is
+        # used as as the "sentence vector". Note that this only makes sense because
+        # the entire model is fine-tuned.
+        tokens = []
+        text_type_ids = []
+        tokens.append("[CLS]")
+        text_type_ids.append(0)
+        for token in tokens_a:
+            tokens.append(token)
+            text_type_ids.append(0)
+        tokens.append("[SEP]")
+        text_type_ids.append(0)
+
+        if tokens_b:
+            for token in tokens_b:
+                tokens.append(token)
+                text_type_ids.append(1)
+            tokens.append("[SEP]")
+            text_type_ids.append(1)
+
+        token_ids = tokenizer.convert_tokens_to_ids(tokens)
+        position_ids = list(range(len(token_ids)))
+
+        if self.label_map:
+            if example.label not in self.label_map:
+                raise KeyError("example.label = {%s} not in label" %
+                               example.label)
+            label_id = self.label_map[example.label]
+        else:
+            label_id = example.label
+
+        Record = namedtuple(
+            'Record',
+            ['token_ids', 'text_type_ids', 'position_ids', 'label_id'])
+
+        if phase != "predict":
+            Record = namedtuple(
+                'Record',
+                ['token_ids', 'text_type_ids', 'position_ids', 'label_id'])
+
+            record = Record(token_ids=token_ids,
+                            text_type_ids=text_type_ids,
+                            position_ids=position_ids,
+                            label_id=label_id)
+        else:
+            Record = namedtuple('Record',
+                                ['token_ids', 'text_type_ids', 'position_ids'])
+            record = Record(token_ids=token_ids,
+                            text_type_ids=text_type_ids,
+                            position_ids=position_ids)
+
+        if self.testflag < 2:
+            print("*** Example ***")
+            print("guid: %s" % (example.guid))
+            print("text_a: %s" % example.text_a)
+            print("input_ids: %s" % " ".join([str(x) for x in token_ids]))
+            print("segment_ids: %s" % " ".join([str(x) for x in text_type_ids]))
+            print("label: %s (id = %s)" % (example.label, label_id))
+            self.testflag += 1
+
+        return record
+
+    def data_generator(self,
+                       batch_size=1,
+                       phase='train',
+                       shuffle=False,
+                       data=None):
+        if phase == 'train':
+            shuffle = False
+            examples = self.get_train_examples()
+            self.num_examples['train'] = len(examples)
+        elif phase == 'val' or phase == 'dev':
+            shuffle = False
+            examples = self.get_dev_examples()
+            self.num_examples['dev'] = len(examples)
+        elif phase == 'test':
+            shuffle = False
+            examples = self.get_test_examples()
+            self.num_examples['test'] = len(examples)
+        elif phase == 'predict':
+            shuffle = False
+            examples = []
+            seq_id = 0
+
+            for item in data:
+                # set label in order to run the program
+                label = list(self.label_map.keys())[0]
+                if len(item) == 1:
+                    item_i = InputExample(guid=seq_id,
+                                          text_a=item[0],
+                                          label=label)
+                elif len(item) == 2:
+                    item_i = InputExample(guid=seq_id,
+                                          text_a=item[0],
+                                          text_b=item[1],
+                                          label=label)
+                else:
+                    raise ValueError(
+                        "The length of input_text is out of handling, which must be 1 or 2!"
+                    )
+                examples.append(item_i)
+                seq_id += 1
+        else:
+            raise ValueError(
+                "Unknown phase, which should be in ['train', 'dev', 'test', 'predict']."
+            )
+
+        def wrapper():
+            if shuffle:
+                np.random.shuffle(examples)
+
+            for batch_data in self._prepare_batch_data(examples,
+                                                       batch_size,
+                                                       phase=phase):
+                yield [batch_data]
+
+        return wrapper
 
 
 if __name__ == '__main__':

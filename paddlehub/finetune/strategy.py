@@ -92,9 +92,11 @@ class AdamWeightDecayStrategy(DefaultStrategy):
                  lr_scheduler="linear_decay",
                  warmup_proportion=0.1,
                  weight_decay=0.01,
-                 optimizer_name="adam"):
-        super(AdamWeightDecayStrategy, self).__init__(
-            learning_rate=learning_rate, optimizer_name=optimizer_name)
+                 optimizer_name="adam",
+                 in_tokens=False):
+        super(AdamWeightDecayStrategy,
+              self).__init__(learning_rate=learning_rate,
+                             optimizer_name=optimizer_name)
         # check strategy correctness
         if lr_scheduler not in ["linear_decay", "noam_decay"]:
             raise ValueError("lr_scheduler {} is not setup "
@@ -102,6 +104,7 @@ class AdamWeightDecayStrategy(DefaultStrategy):
         self._lr_scheduler = lr_scheduler
         self._warmup_proportion = warmup_proportion
         self._weight_decay = weight_decay
+        self._in_tokens = in_tokens
 
     @property
     def lr_scheduler(self):
@@ -119,14 +122,23 @@ class AdamWeightDecayStrategy(DefaultStrategy):
         main_program = loss.block.program
         # calculate wamrup step
         dev_count = self._get_dev_count(config)
-        data_reader.data_generator(
-            batch_size=config.batch_size, phase='train', shuffle=True)
-        data_reader.data_generator(
-            batch_size=config.batch_size, phase='dev', shuffle=False)
-        data_reader.data_generator(
-            batch_size=config.batch_size, phase='test', shuffle=False)
+        data_reader.data_generator(batch_size=config.batch_size,
+                                   phase='train',
+                                   shuffle=True)
+        data_reader.data_generator(batch_size=config.batch_size,
+                                   phase='dev',
+                                   shuffle=False)
+        data_reader.data_generator(batch_size=config.batch_size,
+                                   phase='test',
+                                   shuffle=False)
         num_train_examples = data_reader.get_num_examples(phase='train')
-        max_train_steps = config.num_epoch * num_train_examples // config.batch_size // dev_count
+
+        if self._in_tokens:
+            max_train_steps = config.num_epoch * num_train_examples // (
+                config.batch_size // config.max_seq_len) // dev_count
+        else:
+            max_train_steps = config.num_epoch * num_train_examples // config.batch_size // dev_count
+
         warmup_steps = int(max_train_steps * self.warmup_proportion)
 
         scheduled_lr = adam_weight_decay_optimization(
@@ -154,8 +166,9 @@ class DefaultFinetuneStrategy(DefaultStrategy):
                  learning_rate=1e-4,
                  optimizer_name="adam",
                  regularization_coeff=1e-3):
-        super(DefaultFinetuneStrategy, self).__init__(
-            learning_rate=learning_rate, optimizer_name=optimizer_name)
+        super(DefaultFinetuneStrategy,
+              self).__init__(learning_rate=learning_rate,
+                             optimizer_name=optimizer_name)
         self.learning_rate = learning_rate
         self._optimizer_name = optimizer_name
         self.regularization_coeff = regularization_coeff
@@ -183,8 +196,9 @@ class L2SPFinetuneStrategy(DefaultStrategy):
                  learning_rate=1e-4,
                  optimizer_name="adam",
                  regularization_coeff=1e-3):
-        super(L2SPFinetuneStrategy, self).__init__(
-            learning_rate=learning_rate, optimizer_name=optimizer_name)
+        super(L2SPFinetuneStrategy,
+              self).__init__(learning_rate=learning_rate,
+                             optimizer_name=optimizer_name)
         self.learning_rate = learning_rate
         self._optimizer_name = optimizer_name
         self.regularization_coeff = regularization_coeff

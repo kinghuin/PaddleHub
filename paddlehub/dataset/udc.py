@@ -48,13 +48,13 @@ class UDC(HubDataset):
 
     def _load_train_examples(self):
         self.train_file = os.path.join(self.dataset_dir, "train.txt")
-        self.train_examples = self._read_txt(self.train_file)
+        self.train_examples = self._read_txt(self.train_file, limit=500)
 
     def _load_dev_examples(self):
         self.dev_file = os.path.join(self.dataset_dir, "dev.txt")
         # Dev and test data sets are too big (500,000)
         # To speed up dev/test stage, we  only hold out 5000 samples.
-        self.dev_examples = self._read_txt(self.dev_file, limit=5000)
+        self.dev_examples = self._read_txt(self.dev_file, limit=500)
 
     def _load_test_examples(self):
         self.test_file = os.path.join(self.dataset_dir, "test.txt")

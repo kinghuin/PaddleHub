@@ -203,6 +203,7 @@ class BasicTask(object):
         if self.config.use_pyreader:
             t_program = fluid.Program()
             with fluid.program_guard(t_program, self.env.startup_program):
+                #                 with fluid.unique_name.guard(self.env.UNG):
                 self.env.py_reader = fluid.layers.py_reader(
                     capacity=64,
                     shapes=[var.shape for var in self.feed_var_list],
@@ -212,7 +213,14 @@ class BasicTask(object):
 
                 feed_var_list = self.feed_var_list
                 py_vars = fluid.layers.read_file(self.env.py_reader)
-                self.py_vars = py_vars = to_list(py_vars)
+                #                 self.inputs = []
+                #                 for var in py_vars:
+                #                     t = var[:]
+                #                     t.persistable = True
+                #                     self.inputs.append(t)
+                py_vars = to_list(py_vars)
+                if self.is_train_phase:  # 否则dev/test 创建环境的时候会改变self.py_vars导致重新进入train program的时候无法fetch到self.py_vars
+                    self.py_vars = py_vars
                 input_dict = {
                     feed_var_list[index].name: py_var
                     for index, py_var in enumerate(py_vars)
@@ -868,16 +876,32 @@ class TextClassifierTask(ClassifierTask):
         return [logits]
 
     ###here
+#     @property
+#     def fetch_list(self):
+#         if self.is_train_phase or self.is_test_phase:
+#             if self.is_train_phase:
+#                 return [self.labels[0].name, self.ret_infers.name] + [
+#                     metric.name for metric in self.metrics
+#                 ] + [self.learning_rate.name] + [
+#                     var.name for var in self.py_vars
+#                 ] + [self.cls_feats.name] + [self.logits.name
+#                                              ] + [self.loss.name]
+#             else:
+#                 print(self.labels[0].name)
+#                 print(self.ret_infers.name)
+#                 print([metric.name for metric in self.metrics])
+#                 print(self.loss.name)
+#                 return [self.labels[0].name, self.ret_infers.name] + [metric.name for metric in self.metrics] + [self.loss.name]
+#         return [output.name for output in self.outputs]
+
     @property
     def fetch_list(self):
         if self.is_train_phase or self.is_test_phase:
             if self.is_train_phase:
                 return [self.labels[0].name, self.ret_infers.name] + [
                     metric.name for metric in self.metrics
-                ] + [self.learning_rate.name] + [
-                    var.name for var in self.py_vars
-                ] + [self.cls_feats.name] + [self.logits.name
-                                             ] + [self.loss.name]
+                ] + [self.learning_rate.name
+                     ] + [var.name for var in self.py_vars] + [self.loss.name]
             else:
                 return [self.labels[0].name, self.ret_infers.name
                         ] + [metric.name
@@ -903,16 +927,18 @@ class TextClassifierTask(ClassifierTask):
             np_labels = run_state.run_results[0]
             np_infers = run_state.run_results[1]
             lr = run_state.run_results[3]
-            inp = [st.tolist() for st in run_state.run_results[4:-3]]
-            cls_feats = run_state.run_results[-3]
-            logits = run_state.run_results[-2]
-
             all_labels = np.hstack((all_labels, np_labels.reshape([-1])))
             all_infers = np.hstack((all_infers, np_infers.reshape([-1])))
             all_lr = np.hstack((all_lr, lr.reshape([-1])))
-            all_inp.append(inp)
-            all_cls = np.hstack((all_cls, cls_feats.reshape([-1])))
-            all_logits = np.hstack((all_logits, logits.reshape([-1])))
+
+
+#             if self.is_train_phase:
+#                 inp = [st.tolist() for st in run_state.run_results[4:-3]]
+#                 cls_feats = run_state.run_results[-3]
+#                 logits = run_state.run_results[-2]
+#                 all_inp.append(inp)
+#                 all_cls = np.hstack((all_cls, cls_feats.reshape([-1])))
+#                 all_logits = np.hstack((all_logits, logits.reshape([-1])))
 
         run_time_used = time.time() - run_states[0].run_time_begin
         avg_loss = loss_sum / run_examples
@@ -920,28 +946,28 @@ class TextClassifierTask(ClassifierTask):
         #         from pudb import set_trace
         #         set_trace()
         #         if self.is_train_phase:
-        if self.debug < 2 and self.is_train_phase:
-            print("*" * 6)
-            print("Learning rate:%s" % np.mean(all_lr))
-            print("loss=%s" % avg_loss)
-            #             print("all_inp=%s" % all_inp)
-            print("*" * 6)
-            print("batch0_ids0_sample0=%s" % all_inp[0][0][0][:20])
-            print("batch0_position1_sample0=%s" % all_inp[0][1][0][:20])
-            print("batch0_segment2_sample0=%s" % all_inp[0][2][0][:20])
-            print("batch0_mask3_sample0=%s" % all_inp[0][3][0][:20])
-            print("batch0_label4_sample0=%s" % all_inp[0][4][0][:20])
-            print("*" * 6)
-            print("batch0_ids0_sample0=%s" % all_inp[0][0][1][:20])
-            print("batch0_position1_sample0=%s" % all_inp[0][1][1][:20])
-            print("batch0_segment2_sample0=%s" % all_inp[0][2][1][:20])
-            print("batch0_mask3_sample0=%s" % all_inp[0][3][1][:20])
-            print("batch0_label4_sample0=%s" % all_inp[0][4][1][:20])
-            print("*" * 6)
-            print("all_cls=%s" % all_cls)
-            print("all_logits=%s" % all_logits)
+        #         if self.debug < 2 and self.is_train_phase:
+        #             print("*" * 6)
+        #             print("Learning rate:%s" % np.mean(all_lr))
+        #             print("loss=%s" % avg_loss)
+        #             #             print("all_inp=%s" % all_inp)
+        #             print("*" * 6)
+        #             print("batch0_ids0_sample0=%s" % all_inp[0][0][0][:20])
+        #             print("batch0_position1_sample0=%s" % all_inp[0][1][0][:20])
+        #             print("batch0_segment2_sample0=%s" % all_inp[0][2][0][:20])
+        #             print("batch0_mask3_sample0=%s" % all_inp[0][3][0][:20])
+        #             print("batch0_label4_sample0=%s" % all_inp[0][4][0][:20])
+        #             print("*" * 6)
+        #             print("batch0_ids0_sample0=%s" % all_inp[0][0][1][:20])
+        #             print("batch0_position1_sample0=%s" % all_inp[0][1][1][:20])
+        #             print("batch0_segment2_sample0=%s" % all_inp[0][2][1][:20])
+        #             print("batch0_mask3_sample0=%s" % all_inp[0][3][1][:20])
+        #             print("batch0_label4_sample0=%s" % all_inp[0][4][1][:20])
+        #             print("*" * 6)
+        #             print("all_cls=%s" % all_cls)
+        #             print("all_logits=%s" % all_logits)
 
-            self.debug += 1
+        #             self.debug += 1
 
         scores = {}
         if "acc" in self.metrics_choices:

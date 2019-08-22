@@ -17,6 +17,8 @@ parser.add_argument("--module",             type=str,               default="res
 parser.add_argument("--dataset",            type=str,               default="flowers",                  help="Dataset to finetune.")
 parser.add_argument("--use_pyreader",       type=ast.literal_eval,  default=False,                      help="Whether use pyreader to feed data.")
 parser.add_argument("--use_data_parallel",  type=ast.literal_eval,  default=False,                      help="Whether use data parallel.")
+parser.add_argument("--slanted_triangle_lr_ration", type=float, default=32, help="ration param for slanted triangle learning rate strategy")
+parser.add_argument("--slanted_triangle_lr_cut_frac", type=float, default=0.1, help="cut fraction param for slanted triangle learning rate strategy")
 # yapf: enable.
 
 module_map = {
@@ -58,6 +60,12 @@ def finetune(args):
     img = input_dict["image"]
     feed_list = [img.name]
 
+    # Slanted Triangle Learning Rate FineTune Strategy
+    lr_strategy = hub.SlantedTriangleLRFineTuneStrategy(
+        ratio=args.slanted_triangle_lr_ration,
+        cut_fraction=args.slanted_triangle_lr_cut_frac,
+        learning_rate=1e-4)
+
     config = hub.RunConfig(
         use_data_parallel=args.use_data_parallel,
         use_pyreader=args.use_pyreader,
@@ -66,7 +74,7 @@ def finetune(args):
         batch_size=args.batch_size,
         enable_memory_optim=False,
         checkpoint_dir=args.checkpoint_dir,
-        strategy=hub.finetune.strategy.DefaultFinetuneStrategy())
+        strategy=lr_strategy)  # hub.finetune.strategy.DefaultFinetuneStrategy()
 
     task = hub.ImageClassifierTask(
         data_reader=data_reader,

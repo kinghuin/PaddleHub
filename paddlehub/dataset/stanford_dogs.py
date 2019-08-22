@@ -37,3 +37,53 @@ class StanfordDogsDataset(ImageClassificationDataset):
         self.validate_list_file = "validate_list.txt"
         self.label_list_file = "label_list.txt"
         self.num_labels = 120
+        self.num_examples = {'train': -1, 'dev': -1, 'test': -1}
+
+        self._load_train_examples()
+        self._load_test_examples()
+        self._load_dev_examples()
+
+    def _load_train_examples(self):
+        self.train_examples = self._read_data(self.base_path + "/" +
+                                              self.train_list_file)
+        self.num_examples["train"] = len(self.train_examples)
+
+    def _load_dev_examples(self):
+        self.dev_examples = self._read_data(self.base_path + "/" +
+                                            self.validate_list_file)
+        self.num_examples["dev"] = len(self.dev_examples)
+
+    def _load_test_examples(self):
+        self.test_examples = self._read_data(self.base_path + "/" +
+                                             self.test_list_file)
+        self.num_examples["test"] = len(self.test_examples)
+
+    def get_train_examples(self):
+        return self.train_examples
+
+    def get_dev_examples(self):
+        return self.dev_examples
+
+    def get_test_examples(self):
+        return self.test_examples
+
+    def _read_data(self, data_path):
+        data = []
+        with open(data_path, "r") as file:
+            while True:
+                line = file.readline()
+                if not line:
+                    break
+                line = line.strip()
+                items = line.split(" ")
+                if len(items) > 2:
+                    image_path = " ".join(items[0:-1])
+                else:
+                    image_path = items[0]
+                if not os.path.isabs(image_path):
+                    if self.base_path is not None:
+                        image_path = os.path.join(self.base_path, image_path)
+                label = items[-1]
+                data.append((image_path, items[-1]))
+
+        return data

@@ -117,3 +117,41 @@ def linear_warmup_decay(init_lr, num_train_steps, num_warmup_steps,
                 fluid.layers.assign(decayed_lr, lr)
 
         return lr
+
+
+def slanted_triangle_learning_rate_optimization(
+        loss, cut_step, max_train_step, max_learning_rate, ratio, main_program):
+    scheduled_lr = slanted_triangle_learning_rate_decay(
+        cut_step, max_train_step, max_learning_rate, ratio, main_program)
+    optimizer = fluid.optimizer.Adam(learning_rate=scheduled_lr)
+    optimizer.minimize(loss)
+
+    return scheduled_lr
+
+
+def slanted_triangle_learning_rate_decay(
+        cut_step, max_train_step, max_learning_rate, ratio, main_program):
+
+    with main_program._lr_schedule_guard():
+        global_step = lr_scheduler._decay_step_counter()
+
+        lr = fluid.layers.create_global_var(
+            shape=[1],
+            value=0.0,
+            dtype='float32',
+            persistable=True,
+            name="learning_rate")
+
+        with control_flow.Switch() as switch:
+            with switch.case(global_step <= cut_step):
+                pct = global_step / cut_step
+                decayed_lr = max_learning_rate[0] * (1 + pct *
+                                                     (ratio[0] - 1)) / ratio[0]
+                fluid.layers.assign(decayed_lr, lr)
+            with switch.default():
+                pct = 1 - (global_step - cut_step) / (max_train_step - cut_step)
+                decayed_lr = max_learning_rate[0] * (1 + pct *
+                                                     (ratio[0] - 1)) / ratio[0]
+                fluid.layers.assign(decayed_lr, lr)
+
+        return lr

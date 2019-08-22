@@ -55,4 +55,6 @@ from .finetune.task import ReadingComprehensionTask
 from .finetune.config import RunConfig
 from .finetune.strategy import AdamWeightDecayStrategy
 from .finetune.strategy import DefaultStrategy
+from .finetune.strategy import SlantedTriangleLRFineTuneStrategy
 from .finetune.strategy import DefaultFinetuneStrategy
+from .finetune.strategy import DiscriminativeLRFineTuneStrategy

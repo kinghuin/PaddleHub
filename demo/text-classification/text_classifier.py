@@ -26,7 +26,9 @@ parser.add_argument("--use_gpu", type=ast.literal_eval, default=True, help="Whet
 parser.add_argument("--dataset", type=str, default="chnsenticorp", help="The choice of dataset")
 parser.add_argument("--learning_rate", type=float, default=5e-5, help="Learning rate used to train with warmup.")
 parser.add_argument("--weight_decay", type=float, default=0.01, help="Weight decay rate for L2 regularizer.")
-parser.add_argument("--warmup_proportion", type=float, default=0.0, help="Warmup proportion params for warmup strategy")
+parser.add_argument("--warmup_proportion", type=float, default=0.1, help="Warmup proportion params for warmup strategy")
+parser.add_argument("--slanted_triangle_lr_ration", type=float, default=32, help="ration param for slanted triangle learning rate strategy")
+parser.add_argument("--slanted_triangle_lr_cut_frac", type=float, default=0.1, help="cut fraction param for slanted triangle learning rate strategy")
 parser.add_argument("--data_dir", type=str, default=None, help="Path to training data.")
 parser.add_argument("--checkpoint_dir", type=str, default=None, help="Directory to model checkpoint")
 parser.add_argument("--max_seq_len", type=int, default=512, help="Number of words of the longest seqence.")
@@ -144,6 +146,26 @@ if __name__ == '__main__':
         inputs["input_mask"].name,
     ]
 
+    # Step4: Select finetune strategy, setup config and finetune
+    #     strategy = hub.AdamWeightDecayStrategy(
+    #         warmup_proportion=args.warmup_proportion,
+    #         weight_decay=args.weight_decay,
+    #         learning_rate=args.learning_rate,
+    #         lr_scheduler="linear_decay",
+    #     )
+
+    # Slanted Triangle Learning Rate FineTune Strategy
+    #     strategy = hub.SlantedTriangleLRFineTuneStrategy(
+    #         ratio=args.slanted_triangle_lr_ration,
+    #         cut_fraction=args.slanted_triangle_lr_cut_frac,
+    #         learning_rate=args.learning_rate)
+
+    strategy = hub.DiscriminativeLRFineTuneStrategy(
+        learning_rate=args.learning_rate, lr_factor=2.6)
+
+    # Default Finetune Strategy (SGD)
+    #     strategy = hub.DefaultFinetuneStrategy(
+    #         learning_rate=args.learning_rate)
     if args.use_taskid:
         feed_list = [
             inputs["input_ids"].name,
@@ -152,11 +174,6 @@ if __name__ == '__main__':
             inputs["input_mask"].name,
             inputs["task_ids"].name,
         ]
-    # Select finetune strategy, setup config and finetune
-    strategy = hub.AdamWeightDecayStrategy(
-        weight_decay=args.weight_decay,
-        learning_rate=args.learning_rate,
-        lr_scheduler="linear_decay")
 
     # Setup runing config for PaddleHub Finetune API
     config = hub.RunConfig(

@@ -598,7 +598,7 @@ class BasicTask(object):
                 if self._base_data_reader.get_dev_examples() != []:
                     self.eval(phase="dev")
                 if self._base_data_reader.get_test_examples() != []:
-                    self.eval(phase="test")
+                    self.eval(phase="test", load_best_model=True)
 
             self._finetune_end_event(run_states)
             return run_states

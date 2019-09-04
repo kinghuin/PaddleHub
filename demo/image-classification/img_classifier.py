@@ -10,13 +10,20 @@ import numpy as np
 # yapf: disable
 parser = argparse.ArgumentParser(__doc__)
 parser.add_argument("--num_epoch",          type=int,               default=1,                          help="Number of epoches for fine-tuning.")
-parser.add_argument("--use_gpu",            type=ast.literal_eval,  default=False,                      help="Whether use GPU for fine-tuning.")
+parser.add_argument("--use_gpu",            type=ast.literal_eval,  default=True,                      help="Whether use GPU for fine-tuning.")
 parser.add_argument("--checkpoint_dir",     type=str,               default="paddlehub_finetune_ckpt",  help="Path to save log data.")
 parser.add_argument("--batch_size",         type=int,               default=16,                         help="Total examples' number in batch for training.")
 parser.add_argument("--module",             type=str,               default="resnet50",                 help="Module used as feature extractor.")
 parser.add_argument("--dataset",            type=str,               default="flowers",                  help="Dataset to finetune.")
-parser.add_argument("--use_pyreader",       type=ast.literal_eval,  default=False,                      help="Whether use pyreader to feed data.")
-parser.add_argument("--use_data_parallel",  type=ast.literal_eval,  default=False,                      help="Whether use data parallel.")
+parser.add_argument("--use_pyreader",       type=ast.literal_eval,  default=True,                      help="Whether use pyreader to feed data.")
+parser.add_argument("--use_data_parallel",  type=ast.literal_eval,  default=True,                      help="Whether use data parallel.")
+
+parser.add_argument("--warmup_proportion", type=float, default=0.0, help="Warmup proportion params for warmup strategy")
+parser.add_argument("--end_learning_rate", type=float, default=0.0, help="Warmup proportion params for warmup strategy")
+parser.add_argument("--dis_blocks", type=int, default=0, help="Warmup proportion params for warmup strategy")
+parser.add_argument("--frz_blocks", type=int, default=0, help="Warmup proportion params for warmup strategy")
+parser.add_argument("--cut_fraction", type=float, default=0.0, help="Warmup proportion params for warmup strategy")
+
 # yapf: enable.
 
 module_map = {
@@ -58,6 +65,25 @@ def finetune(args):
     img = input_dict["image"]
     feed_list = [img.name]
 
+    warmup_pro = args.warmup_proportion
+    scheduler = {
+        "warmup": warmup_pro,
+        "linear_decay": {
+            "start_point": warmup_pro,
+            "end_learning_rate": args.end_learning_rate,
+        },
+        "discriminative": {
+            "blocks": args.dis_blocks,
+        },
+        "gradual_unfreeze": args.frz_blocks,
+        "slanted_triangle": {
+            "cut_fraction": args.cut_fraction,
+            "ratio": 32
+        }
+    }
+
+    args.checkpoint_dir = args.checkpoint_dir + str(scheduler)
+
     config = hub.RunConfig(
         use_data_parallel=args.use_data_parallel,
         use_pyreader=args.use_pyreader,
@@ -66,7 +92,7 @@ def finetune(args):
         batch_size=args.batch_size,
         enable_memory_optim=False,
         checkpoint_dir=args.checkpoint_dir,
-        strategy=hub.finetune.strategy.DefaultFinetuneStrategy())
+        strategy=hub.finetune.strategy.CombinedStrategy(scheduler=scheduler))
 
     task = hub.ImageClassifierTask(
         data_reader=data_reader,

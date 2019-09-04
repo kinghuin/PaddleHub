@@ -155,6 +155,10 @@ class BasicTask(object):
         # set default phase
         self.enter_phase("train")
 
+        print("*" * 50)
+        print("%s" % self.config.strategy)
+        print("*" * 50)
+
     @contextlib.contextmanager
     def phase_guard(self, phase):
         self.enter_phase(phase)
@@ -265,7 +269,8 @@ class BasicTask(object):
                                      self._base_startup_program):
                 with fluid.unique_name.guard(self.env.UNG):
                     self.scheduled_lr, self.max_train_steps = self.config.strategy.execute(
-                        self.loss, self._base_data_reader, self.config)
+                        self.loss, self._base_data_reader, self.config,
+                        self.device_count)
 
         if self.is_train_phase:
             loss_name = self.env.loss.name
@@ -495,6 +500,14 @@ class BasicTask(object):
                 dirname=model_saved_dir,
                 main_program=self.main_program)
 
+        if self.is_best_model_loaded:
+            with open(
+                    "/home/qiujinxuan/PaddleHub/demo/image-classification/cv_strategy.txt",
+                    "a") as fout:
+                fout.write("%s\n%s\n[%s]:  %s\n" % (type(
+                    self._base_data_reader.dataset), self.config.strategy,
+                                                    self.phase, main_value))
+
     def _log_interval_event(self, run_states):
         scores, avg_loss, run_speed = self._calculate_metrics(run_states)
         self.env.loss_scalar.add_record(self.current_step, avg_loss)
@@ -592,6 +605,7 @@ class BasicTask(object):
                 # Final evaluation
                 if self._base_data_reader.get_dev_examples() != []:
                     self.eval(phase="dev")
+                    self.eval(phase="dev", load_best_model=True)
                 if self._base_data_reader.get_test_examples() != []:
                     self.eval(phase="test", load_best_model=True)
 

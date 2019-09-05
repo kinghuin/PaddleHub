@@ -24,8 +24,8 @@ from paddlehub.dataset.base_cv_dataset import ImageClassificationDataset
 
 
 class StanfordDogsDataset(ImageClassificationDataset):
-    def __init__(self):
-        super(StanfordDogsDataset, self).__init__()
+    def __init__(self, sample=False):
+        super(StanfordDogsDataset, self).__init__(sample=sample)
         dataset_path = os.path.join(hub.common.dir.DATA_HOME,
                                     "StanfordDogs-120")
         self.base_path = self._download_dataset(

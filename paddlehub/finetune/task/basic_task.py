@@ -501,12 +501,11 @@ class BasicTask(object):
                 main_program=self.main_program)
 
         if self.is_best_model_loaded:
-            with open(
-                    "/home/qiujinxuan/PaddleHub/demo/image-classification/cv_strategy.txt",
-                    "a") as fout:
-                fout.write("%s\n%s\n[%s]:  %s\n" % (type(
-                    self._base_data_reader.dataset), self.config.strategy,
-                                                    self.phase, main_value))
+            with open("./cv_strategy55.txt", "a") as fout:
+                fout.write("%s\n%s\nifsample=%s,epoch=%s[%s]:  %s\n" %
+                           (type(self._base_data_reader.dataset),
+                            self.config.strategy, self.config.sample,
+                            self.config.num_epoch, self.phase, main_value))
 
     def _log_interval_event(self, run_states):
         scores, avg_loss, run_speed = self._calculate_metrics(run_states)
@@ -603,11 +602,11 @@ class BasicTask(object):
                 # Save checkpoint after finetune
                 self.save_checkpoint()
                 # Final evaluation
-                if self._base_data_reader.get_dev_examples() != []:
-                    self.eval(phase="dev")
-                    self.eval(phase="dev", load_best_model=True)
-                if self._base_data_reader.get_test_examples() != []:
-                    self.eval(phase="test", load_best_model=True)
+            if self._base_data_reader.get_dev_examples() != []:
+                self.eval(phase="dev")
+                self.eval(phase="dev", load_best_model=True)
+            if self._base_data_reader.get_test_examples() != []:
+                self.eval(phase="test", load_best_model=True)
 
             self._finetune_end_event(run_states)
             return run_states

@@ -26,7 +26,7 @@ from paddlehub.common.downloader import default_downloader
 
 
 class ImageClassificationDataset(object):
-    def __init__(self):
+    def __init__(self, sample=False):
         self.base_path = None
         self.train_list_file = None
         self.test_list_file = None
@@ -34,6 +34,7 @@ class ImageClassificationDataset(object):
         self.label_list_file = None
         self.num_labels = 0
         self.label_list = []
+        self.sample = sample
 
         self.train_examples = []
         self.dev_examples = []
@@ -70,6 +71,12 @@ class ImageClassificationDataset(object):
                 label = items[-1]
                 data.append((image_path, items[-1]))
 
+        if self.sample:
+            data = data[:len(data) // 10]
+
+        if shuffle:
+            np.random.shuffle(data)
+
         if phase == 'train':
             self.train_examples = data
         elif phase == 'dev':
@@ -78,8 +85,6 @@ class ImageClassificationDataset(object):
             self.test_examples = data
 
         def _base_reader():
-            if shuffle:
-                np.random.shuffle(data)
 
             for item in data:
                 yield item

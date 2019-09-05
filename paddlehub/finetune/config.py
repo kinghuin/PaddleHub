@@ -38,7 +38,8 @@ class RunConfig(object):
                  num_epoch=1,
                  batch_size=32,
                  enable_memory_optim=True,
-                 strategy=None):
+                 strategy=None,
+                 sample=False):
         """ Construct finetune Config """
         self._log_interval = log_interval
         self._eval_interval = eval_interval
@@ -49,6 +50,7 @@ class RunConfig(object):
         self._batch_size = batch_size
         self._use_pyreader = use_pyreader
         self._use_data_parallel = use_data_parallel
+        self.sample = sample
         if strategy is None:
             self._strategy = DefaultStrategy()
         else:

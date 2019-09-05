@@ -18,11 +18,14 @@ parser.add_argument("--dataset",            type=str,               default="flo
 parser.add_argument("--use_pyreader",       type=ast.literal_eval,  default=True,                      help="Whether use pyreader to feed data.")
 parser.add_argument("--use_data_parallel",  type=ast.literal_eval,  default=True,                      help="Whether use data parallel.")
 
+parser.add_argument("--sample",  type=ast.literal_eval,  default=False,                      help="Whether use data parallel.")
 parser.add_argument("--warmup_proportion", type=float, default=0.0, help="Warmup proportion params for warmup strategy")
 parser.add_argument("--end_learning_rate", type=float, default=0.0, help="Warmup proportion params for warmup strategy")
 parser.add_argument("--dis_blocks", type=int, default=0, help="Warmup proportion params for warmup strategy")
 parser.add_argument("--frz_blocks", type=int, default=0, help="Warmup proportion params for warmup strategy")
 parser.add_argument("--cut_fraction", type=float, default=0.0, help="Warmup proportion params for warmup strategy")
+parser.add_argument("--start_point", type=float, default=1.0, help="Warmup proportion params for warmup strategy")
+
 
 # yapf: enable.
 
@@ -43,7 +46,7 @@ def finetune(args):
     if args.dataset.lower() == "flowers":
         dataset = hub.dataset.Flowers()
     elif args.dataset.lower() == "dogcat":
-        dataset = hub.dataset.DogCat()
+        dataset = hub.dataset.DogCat(sample=args.sample)
     elif args.dataset.lower() == "indoor67":
         dataset = hub.dataset.Indoor67()
     elif args.dataset.lower() == "food101":
@@ -65,11 +68,10 @@ def finetune(args):
     img = input_dict["image"]
     feed_list = [img.name]
 
-    warmup_pro = args.warmup_proportion
     scheduler = {
-        "warmup": warmup_pro,
+        "warmup": args.warmup_proportion,
         "linear_decay": {
-            "start_point": warmup_pro,
+            "start_point": args.start_point,
             "end_learning_rate": args.end_learning_rate,
         },
         "discriminative": {
@@ -82,13 +84,15 @@ def finetune(args):
         }
     }
 
-    args.checkpoint_dir = args.checkpoint_dir + str(scheduler)
+    args.checkpoint_dir = args.checkpoint_dir + str(
+        args.sample) + str(scheduler)
 
     config = hub.RunConfig(
         use_data_parallel=args.use_data_parallel,
         use_pyreader=args.use_pyreader,
         use_cuda=args.use_gpu,
         num_epoch=args.num_epoch,
+        sample=args.sample,
         batch_size=args.batch_size,
         enable_memory_optim=False,
         checkpoint_dir=args.checkpoint_dir,

@@ -155,10 +155,6 @@ class BasicTask(object):
         # set default phase
         self.enter_phase("train")
 
-        print("*" * 50)
-        print("%s" % self.config.strategy)
-        print("*" * 50)
-
     @contextlib.contextmanager
     def phase_guard(self, phase):
         self.enter_phase(phase)
@@ -501,7 +497,7 @@ class BasicTask(object):
                 main_program=self.main_program)
 
         if self.is_best_model_loaded:
-            with open("./cv_strategy55.txt", "a") as fout:
+            with open("./cv_strategy_test.txt", "a") as fout:
                 fout.write("%s\n%s\nifsample=%s,epoch=%s[%s]:  %s\n" %
                            (type(self._base_data_reader.dataset),
                             self.config.strategy, self.config.sample,
@@ -563,6 +559,11 @@ class BasicTask(object):
             best_score=self.best_score,
             exe=self.exe,
             main_program=self.main_program)
+        is_load_successful, self.env.current_epoch, self.env.current_step, self.best_score = self.load_checkpoint(
+        )
+        print("*************************")
+        print(self.best_score)
+        print("*************************")
 
     def load_checkpoint(self):
         is_load_successful, self.env.current_epoch, self.env.current_step, self.best_score = load_checkpoint(

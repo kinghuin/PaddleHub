@@ -3,9 +3,9 @@ export CUDA_VISIBLE_DEVICES=0
 
 # User can select chnsenticorp, nlpcc_dbqa, lcqmc and so on for different task
 DATASET="chnsenticorp"
-CKPT_DIR="./ckpt_${DATASET}"
+CKPT_DIR="./ckpt_${DATASET}_117"
 
-python -u text_classifier.py \
+nohup python -u text_classifier.py \
                    --batch_size=24 \
                    --use_gpu=True \
                    --dataset=${DATASET} \
@@ -16,7 +16,7 @@ python -u text_classifier.py \
                    --num_epoch=3 \
                    --use_pyreader=True \
                    --use_data_parallel=True \
-                   --use_taskid=False
+                   --use_taskid=False > ${DATASET}.log.117
 
 # Recommending hyper parameters for difference task
 # for ChineseGLUE:

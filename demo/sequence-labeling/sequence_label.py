@@ -60,12 +60,18 @@ if __name__ == '__main__':
         inputs["segment_ids"].name, inputs["input_mask"].name
     ]
 
-    # Select a finetune strategy
-    strategy = hub.AdamWeightDecayStrategy(
-        weight_decay=args.weight_decay,
-        learning_rate=args.learning_rate,
-        lr_scheduler="linear_decay",
-    )
+    scheduler = {
+        "warmup": 0.1,
+        "linear_decay": {
+            "start_point": 0.9,
+            "end_learning_rate": 0.0,
+        },
+        "gradual_unfreeze": 3,
+    }
+
+    # Select finetune strategy, setup config and finetune
+    strategy = hub.CombinedStrategy(
+        learning_rate=args.learning_rate, scheduler=scheduler)
 
     # Setup runing config for PaddleHub Finetune API
     config = hub.RunConfig(

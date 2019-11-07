@@ -167,14 +167,24 @@ if __name__ == '__main__':
     if args.use_taskid:
         feed_list.append(inputs["task_ids"].name)
 
+    scheduler = {
+        "warmup": 0.1,
+        "linear_decay": {
+            "start_point": 0.9,
+            "end_learning_rate": 0.0,
+        },
+        "gradual_unfreeze": 3,
+    }
+
     # Select finetune strategy, setup config and finetune
-    strategy = hub.AdamWeightDecayStrategy(
-        weight_decay=args.weight_decay,
-        learning_rate=args.learning_rate,
-        lr_scheduler="linear_decay")
+    strategy = hub.CombinedStrategy(
+        learning_rate=args.learning_rate, scheduler=scheduler)
 
     # Setup runing config for PaddleHub Finetune API
     config = hub.RunConfig(
+        log_interval=10,
+        eval_interval=300,
+        save_ckpt_interval=10000,
         use_data_parallel=args.use_data_parallel,
         use_pyreader=args.use_pyreader,
         use_cuda=args.use_gpu,

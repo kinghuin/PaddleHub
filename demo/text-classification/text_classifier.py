@@ -15,140 +15,70 @@
 """Finetuning on classification task """
 
 import argparse
-import ast
-import paddle.fluid as fluid
 import paddlehub as hub
+import os
+from paddlehub.common.logger import logger
+import shutil
 
 # yapf: disable
 parser = argparse.ArgumentParser(__doc__)
-parser.add_argument("--num_epoch", type=int, default=3, help="Number of epoches for fine-tuning.")
-parser.add_argument("--use_gpu", type=ast.literal_eval, default=True, help="Whether use GPU for finetuning, input should be True or False")
+
+
 parser.add_argument("--dataset", type=str, default="chnsenticorp", help="The choice of dataset")
+
+
 parser.add_argument("--learning_rate", type=float, default=5e-5, help="Learning rate used to train with warmup.")
-parser.add_argument("--weight_decay", type=float, default=0.01, help="Weight decay rate for L2 regularizer.")
-parser.add_argument("--warmup_proportion", type=float, default=0.0, help="Warmup proportion params for warmup strategy")
-parser.add_argument("--data_dir", type=str, default=None, help="Path to training data.")
-parser.add_argument("--checkpoint_dir", type=str, default=None, help="Directory to model checkpoint")
-parser.add_argument("--max_seq_len", type=int, default=512, help="Number of words of the longest seqence.")
-parser.add_argument("--batch_size", type=int, default=32, help="Total examples' number in batch for training.")
-parser.add_argument("--use_pyreader", type=ast.literal_eval, default=False, help="Whether use pyreader to feed data.")
-parser.add_argument("--use_data_parallel", type=ast.literal_eval, default=False, help="Whether use data parallel.")
-parser.add_argument("--use_taskid", type=ast.literal_eval, default=False, help="Whether to use taskid ,if yes to use ernie v2.")
+parser.add_argument("--blocks", type=int, default=0, help="dis lr blocks")
+parser.add_argument("--factor", type=float, default=2.6, help="dis lr factor")
+
+
+parser.add_argument("--saved_params_dir", type=str, default="", help="Directory for saving model during ")
+parser.add_argument("--model_path", type=str, default="", help="load model path")
+
 args = parser.parse_args()
 # yapf: enable.
+
+
+def is_path_valid(path):
+    if path == "":
+        return False
+    path = os.path.abspath(path)
+    dirname = os.path.dirname(path)
+    if not os.path.exists(dirname):
+        os.mkdir(dirname)
+    return True
+
 
 if __name__ == '__main__':
     dataset = None
     metrics_choices = []
     # Download dataset and use ClassifyReader to read dataset
-    if args.dataset.lower() == "chnsenticorp":
-        dataset = hub.dataset.ChnSentiCorp()
-        module = hub.Module(name="roberta_wwm_ext_chinese_L-24_H-1024_A-16")
-        metrics_choices = ["acc"]
-    elif args.dataset.lower() == "tnews":
-        dataset = hub.dataset.TNews()
-        module = hub.Module(name="roberta_wwm_ext_chinese_L-24_H-1024_A-16")
-        metrics_choices = ["acc", "f1"]
-    elif args.dataset.lower() == "nlpcc_dbqa":
-        dataset = hub.dataset.NLPCC_DBQA()
-        module = hub.Module(name="roberta_wwm_ext_chinese_L-24_H-1024_A-16")
-        metrics_choices = ["acc"]
-    elif args.dataset.lower() == "lcqmc":
-        dataset = hub.dataset.LCQMC()
-        module = hub.Module(name="roberta_wwm_ext_chinese_L-24_H-1024_A-16")
-        metrics_choices = ["acc"]
-    elif args.dataset.lower() == 'inews':
+    if args.dataset.lower() == 'inews':
         dataset = hub.dataset.INews()
         module = hub.Module(name="roberta_wwm_ext_chinese_L-24_H-1024_A-16")
-        metrics_choices = ["acc", "f1"]
-    elif args.dataset.lower() == 'bq':
-        dataset = hub.dataset.BQ()
-        module = hub.Module(name="roberta_wwm_ext_chinese_L-24_H-1024_A-16")
-        metrics_choices = ["acc", "f1"]
-    elif args.dataset.lower() == 'thucnews':
-        dataset = hub.dataset.THUCNEWS()
-        module = hub.Module(name="roberta_wwm_ext_chinese_L-24_H-1024_A-16")
-        metrics_choices = ["acc", "f1"]
-    elif args.dataset.lower() == 'iflytek':
-        dataset = hub.dataset.IFLYTEK()
-        module = hub.Module(name="roberta_wwm_ext_chinese_L-24_H-1024_A-16")
-        metrics_choices = ["acc", "f1"]
-    elif args.dataset.lower() == "mrpc":
-        dataset = hub.dataset.GLUE("MRPC")
-        if args.use_taskid:
-            module = hub.Module(name="ernie_v2_eng_base")
-        else:
-            module = hub.Module(name="bert_uncased_L-12_H-768_A-12")
-        metrics_choices = ["f1", "acc"]
-    # The first metric will be choose to eval. Ref: task.py:799
-    elif args.dataset.lower() == "qqp":
-        dataset = hub.dataset.GLUE("QQP")
-        if args.use_taskid:
-            module = hub.Module(name="ernie_v2_eng_base")
-        else:
-            module = hub.Module(name="bert_uncased_L-12_H-768_A-12")
-        metrics_choices = ["f1", "acc"]
-    elif args.dataset.lower() == "sst-2":
-        dataset = hub.dataset.GLUE("SST-2")
-        if args.use_taskid:
-            module = hub.Module(name="ernie_v2_eng_base")
-        else:
-            module = hub.Module(name="bert_uncased_L-12_H-768_A-12")
         metrics_choices = ["acc"]
-    elif args.dataset.lower() == "cola":
-        dataset = hub.dataset.GLUE("CoLA")
-        if args.use_taskid:
-            module = hub.Module(name="ernie_v2_eng_base")
-        else:
-            module = hub.Module(name="bert_uncased_L-12_H-768_A-12")
-        metrics_choices = ["matthews", "acc"]
-    elif args.dataset.lower() == "qnli":
-        dataset = hub.dataset.GLUE("QNLI")
-        if args.use_taskid:
-            module = hub.Module(name="ernie_v2_eng_base")
-        else:
-            module = hub.Module(name="bert_uncased_L-12_H-768_A-12")
-        metrics_choices = ["acc"]
-    elif args.dataset.lower() == "rte":
-        dataset = hub.dataset.GLUE("RTE")
-        if args.use_taskid:
-            module = hub.Module(name="ernie_v2_eng_base")
-        else:
-            module = hub.Module(name="bert_uncased_L-12_H-768_A-12")
-        metrics_choices = ["acc"]
-    elif args.dataset.lower() == "mnli" or args.dataset.lower() == "mnli":
-        dataset = hub.dataset.GLUE("MNLI_m")
-        if args.use_taskid:
-            module = hub.Module(name="ernie_v2_eng_base")
-        else:
-            module = hub.Module(name="bert_uncased_L-12_H-768_A-12")
-        metrics_choices = ["acc"]
-    elif args.dataset.lower() == "mnli_mm":
-        dataset = hub.dataset.GLUE("MNLI_mm")
-        if args.use_taskid:
-            module = hub.Module(name="ernie_v2_eng_base")
-        else:
-            module = hub.Module(name="bert_uncased_L-12_H-768_A-12")
-        metrics_choices = ["acc"]
+        batch_size = 4
+        max_seq_len = 512
+        num_epoch = 3
+        checkpoint_dir = os.path.join(".", "autodl_inews")
     elif args.dataset.lower().startswith("xnli"):
         dataset = hub.dataset.XNLI(language=args.dataset.lower()[-2:])
         module = hub.Module(name="roberta_wwm_ext_chinese_L-24_H-1024_A-16")
         metrics_choices = ["acc"]
+        batch_size = 32
+        max_seq_len = 128
+        num_epoch = 2
+        checkpoint_dir = os.path.join(".", "autodl_xnli")
     else:
         raise ValueError("%s dataset is not defined" % args.dataset)
 
-    support_metrics = ["acc", "f1", "matthews"]
-    for metric in metrics_choices:
-        if metric not in support_metrics:
-            raise ValueError("\"%s\" metric is not defined" % metric)
-
     inputs, outputs, program = module.context(
-        trainable=True, max_seq_len=args.max_seq_len)
+        trainable=True, max_seq_len=max_seq_len)
     reader = hub.reader.ClassifyReader(
         dataset=dataset,
         vocab_path=module.get_vocab_path(),
-        max_seq_len=args.max_seq_len,
-        use_task_id=args.use_taskid)
+        max_seq_len=max_seq_len,
+        use_task_id=False)
 
     # Construct transfer learning network
     # Use "pooled_output" for classification tasks on an entire sentence.
@@ -164,16 +94,16 @@ if __name__ == '__main__':
         inputs["input_mask"].name,
     ]
 
-    if args.use_taskid:
-        feed_list.append(inputs["task_ids"].name)
-
     scheduler = {
         "warmup": 0.1,
         "linear_decay": {
             "start_point": 0.9,
             "end_learning_rate": 0.0,
         },
-        "gradual_unfreeze": 3,
+        "discriminative": {
+            "blocks": args.blocks,
+            "factor": args.factor,
+        },
     }
 
     # Select finetune strategy, setup config and finetune
@@ -185,12 +115,12 @@ if __name__ == '__main__':
         log_interval=10,
         eval_interval=300,
         save_ckpt_interval=10000,
-        use_data_parallel=args.use_data_parallel,
-        use_pyreader=args.use_pyreader,
-        use_cuda=args.use_gpu,
-        num_epoch=args.num_epoch,
-        batch_size=args.batch_size,
-        checkpoint_dir=args.checkpoint_dir,
+        use_data_parallel=True,
+        use_pyreader=True,
+        use_cuda=True,
+        num_epoch=num_epoch,
+        batch_size=batch_size,
+        checkpoint_dir=checkpoint_dir,
         strategy=strategy)
 
     # Define a classfication finetune task by PaddleHub's API
@@ -202,6 +132,20 @@ if __name__ == '__main__':
         config=config,
         metrics_choices=metrics_choices)
 
+    # Load model from the defined model path or not
+    if args.model_path != "":
+        with cls_task.phase_guard(phase="train"):
+            cls_task.init_if_necessary()
+            cls_task.load_parameters(args.model_path)
+            logger.info("PaddleHub has loaded model from %s" % args.model_path)
+
     # Finetune and evaluate by PaddleHub's API
     # will finish training, evaluation, testing, save model automatically
     cls_task.finetune_and_eval()
+    best_model_dir = os.path.join(checkpoint_dir, "best_model")
+    if is_path_valid(args.saved_params_dir) and os.path.exists(best_model_dir):
+        shutil.copytree(best_model_dir, args.saved_params_dir)
+        shutil.rmtree(checkpoint_dir)
+
+        # acc on dev will be used by auto finetune
+    print("AutoFinetuneEval" + "\t" + str(float(cls_task.best_score)))

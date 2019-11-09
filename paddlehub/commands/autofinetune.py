@@ -179,6 +179,8 @@ class AutoFineTuneCommand(BaseCommand):
         run_round_cnt = 0
         solutions_modeldirs = {}
         print("PaddleHub Autofinetune starts.")
+        print("*" * 100)
+        print(self.args.round)
         while (not autoft.is_stop()) and run_round_cnt < self.args.round:
             print("PaddleHub Autofinetune starts round at %s." % run_round_cnt)
             output_dir = autoft._output_dir + "/round" + str(run_round_cnt)

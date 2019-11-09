@@ -1,9 +1,9 @@
 param_list:
 - name : learning_rate
-  init_value : 5e-5
+  init_value : 0.00005
   type : float
-  lower_than : 5e-3
-  greater_than : 5e-6
+  lower_than : 0.005
+  greater_than : 0.000005
 - name : blocks
   init_value : 16
   type : int

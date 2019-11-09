@@ -57,7 +57,7 @@ if __name__ == '__main__':
         dataset = hub.dataset.INews()
         module = hub.Module(name="roberta_wwm_ext_chinese_L-24_H-1024_A-16")
         metrics_choices = ["acc"]
-        batch_size = 4
+        batch_size = 8
         max_seq_len = 512
         num_epoch = 3
         checkpoint_dir = os.path.join(".", "autodl_inews")

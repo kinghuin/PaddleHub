@@ -23,17 +23,15 @@ import shutil
 # yapf: disable
 parser = argparse.ArgumentParser(__doc__)
 
-
 parser.add_argument("--dataset", type=str, default="chnsenticorp", help="The choice of dataset")
-
 
 parser.add_argument("--learning_rate", type=float, default=5e-5, help="Learning rate used to train with warmup.")
 parser.add_argument("--blocks", type=int, default=0, help="dis lr blocks")
 parser.add_argument("--factor", type=float, default=2.6, help="dis lr factor")
 
-
 parser.add_argument("--saved_params_dir", type=str, default="", help="Directory for saving model during ")
 parser.add_argument("--model_path", type=str, default="", help="load model path")
+parser.add_argument("--checkpoint_dir", type=str, default=None, help="Directory to model checkpoint")
 
 args = parser.parse_args()
 # yapf: enable.
@@ -60,7 +58,6 @@ if __name__ == '__main__':
         batch_size = 8
         max_seq_len = 512
         num_epoch = 3
-        checkpoint_dir = os.path.join(".", "autodl_inews")
     elif args.dataset.lower().startswith("xnli"):
         dataset = hub.dataset.XNLI(language=args.dataset.lower()[-2:])
         module = hub.Module(name="roberta_wwm_ext_chinese_L-24_H-1024_A-16")
@@ -68,7 +65,6 @@ if __name__ == '__main__':
         batch_size = 32
         max_seq_len = 128
         num_epoch = 2
-        checkpoint_dir = os.path.join(".", "autodl_xnli")
     else:
         raise ValueError("%s dataset is not defined" % args.dataset)
 
@@ -120,7 +116,7 @@ if __name__ == '__main__':
         use_cuda=True,
         num_epoch=num_epoch,
         batch_size=batch_size,
-        checkpoint_dir=checkpoint_dir,
+        checkpoint_dir=args.checkpoint_dir,
         strategy=strategy)
 
     # Define a classfication finetune task by PaddleHub's API
@@ -142,10 +138,11 @@ if __name__ == '__main__':
     # Finetune and evaluate by PaddleHub's API
     # will finish training, evaluation, testing, save model automatically
     cls_task.finetune_and_eval()
-    best_model_dir = os.path.join(checkpoint_dir, "best_model")
+    best_model_dir = os.path.join(args.checkpoint_dir, args.dataset.lower(),
+                                  "best_model")
     if is_path_valid(args.saved_params_dir) and os.path.exists(best_model_dir):
         shutil.copytree(best_model_dir, args.saved_params_dir)
-        shutil.rmtree(checkpoint_dir)
+        shutil.rmtree(args.checkpoint_dir)
 
         # acc on dev will be used by auto finetune
     print("AutoFinetuneEval" + "\t" + str(float(cls_task.best_score)))

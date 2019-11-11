@@ -138,8 +138,7 @@ if __name__ == '__main__':
     # Finetune and evaluate by PaddleHub's API
     # will finish training, evaluation, testing, save model automatically
     cls_task.finetune_and_eval()
-    best_model_dir = os.path.join(args.checkpoint_dir, args.dataset.lower(),
-                                  "best_model")
+    best_model_dir = os.path.join(args.checkpoint_dir, "best_model")
     if is_path_valid(args.saved_params_dir) and os.path.exists(best_model_dir):
         shutil.copytree(best_model_dir, args.saved_params_dir)
         shutil.rmtree(args.checkpoint_dir)

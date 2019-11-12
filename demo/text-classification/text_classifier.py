@@ -54,7 +54,7 @@ def finetune(args):
         module = hub.Module(name="roberta_wwm_ext_chinese_L-24_H-1024_A-16")
         metrics_choices = ["acc"]
         batch_size = 8
-        max_seq_len = 512
+        max_seq_len = 500
         num_epoch = 3
     elif args.dataset.lower().startswith("xnli"):
         dataset = hub.dataset.XNLI(language=args.dataset.lower()[-2:])

@@ -53,7 +53,7 @@ def finetune(args):
         dataset = hub.dataset.INews()
         module = hub.Module(name="roberta_wwm_ext_chinese_L-24_H-1024_A-16")
         metrics_choices = ["acc"]
-        batch_size = 6
+        batch_size = 4
         max_seq_len = 512
         num_epoch = 3
     elif args.dataset.lower().startswith("xnli"):
@@ -107,8 +107,8 @@ def finetune(args):
     # Setup runing config for PaddleHub Finetune API
     config = hub.RunConfig(
         log_interval=10,
-        eval_interval=500,
-        save_ckpt_interval=100000,
+        eval_interval=5000000000,
+        save_ckpt_interval=100000000,
         use_data_parallel=True,
         use_pyreader=True,
         use_cuda=True,
@@ -135,10 +135,10 @@ def finetune(args):
 
     # Finetune and evaluate by PaddleHub's API
     # will finish training, evaluation, testing, save model automatically
-    cls_task.finetune()
-    run_states = cls_task.eval()
-    eval_avg_score, eval_avg_loss, eval_run_speed = cls_task._calculate_metrics(
-        run_states)
+    cls_task.finetune_and_eval()
+    # run_states = cls_task.eval()
+    # eval_avg_score, eval_avg_loss, eval_run_speed = cls_task._calculate_metrics(
+    #     run_states)
     best_model_dir = os.path.join(config.checkpoint_dir, "best_model")
 
     if is_path_valid(args.saved_params_dir) and os.path.exists(best_model_dir):
@@ -147,7 +147,7 @@ def finetune(args):
 
         # acc on dev will be used by auto finetune
     # print("AutoFinetuneEval" + "\t" + str())
-    hub.report_final_result(eval_avg_score["acc"])
+    hub.report_final_result(cls_task.best_score)
 
 
 if __name__ == "__main__":

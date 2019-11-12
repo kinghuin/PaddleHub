@@ -89,6 +89,8 @@ class INews(HubDataset):
                 example = InputExample(
                     guid=i, label=data[0], text_a=data[2], text_b=data[3])
                 examples.append(example)
+                if len(examples) > 100:
+                    return examples
             return examples
 
 

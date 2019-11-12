@@ -107,6 +107,8 @@ class XNLI(HubDataset):
                 seq_id += 1
                 examples.append(example)
 
+            if len(examples) > 100:
+                return examples
             return examples
 
 

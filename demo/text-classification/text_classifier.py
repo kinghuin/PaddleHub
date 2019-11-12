@@ -47,7 +47,7 @@ def is_path_valid(path):
     return True
 
 
-if __name__ == '__main__':
+def finetune(args):
     dataset = None
     metrics_choices = []
     # Download dataset and use ClassifyReader to read dataset
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     config = hub.RunConfig(
         log_interval=10,
         eval_interval=500,
-        save_ckpt_interval=10000,
+        save_ckpt_interval=100000,
         use_data_parallel=True,
         use_pyreader=True,
         use_cuda=True,
@@ -138,10 +138,16 @@ if __name__ == '__main__':
     # Finetune and evaluate by PaddleHub's API
     # will finish training, evaluation, testing, save model automatically
     cls_task.finetune_and_eval()
-    best_model_dir = os.path.join(args.checkpoint_dir, "best_model")
+    best_model_dir = os.path.join(config.checkpoint_dir, "best_model")
     if is_path_valid(args.saved_params_dir) and os.path.exists(best_model_dir):
         shutil.copytree(best_model_dir, args.saved_params_dir)
-        shutil.rmtree(args.checkpoint_dir)
+        shutil.rmtree(config.checkpoint_dir)
 
         # acc on dev will be used by auto finetune
-    print("AutoFinetuneEval" + "\t" + str(float(cls_task.best_score)))
+    # print("AutoFinetuneEval" + "\t" + str())
+    hub.report_final_result(float(cls_task.best_score))
+
+
+if __name__ == "__main__":
+    args = parser.parse_args()
+    finetune(args)

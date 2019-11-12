@@ -48,8 +48,6 @@ def is_path_valid(path):
 
 
 def finetune(args):
-    dataset = None
-    metrics_choices = []
     # Download dataset and use ClassifyReader to read dataset
     if args.dataset.lower() == 'inews':
         dataset = hub.dataset.INews()

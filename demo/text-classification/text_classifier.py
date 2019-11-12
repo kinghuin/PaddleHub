@@ -106,7 +106,7 @@ def finetune(args):
 
     # Setup runing config for PaddleHub Finetune API
     config = hub.RunConfig(
-        log_interval=10,
+        log_interval=100,
         eval_interval=5000000000,
         save_ckpt_interval=100000000,
         use_data_parallel=True,

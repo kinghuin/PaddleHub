@@ -63,6 +63,13 @@ def finetune(args):
         batch_size = 32
         max_seq_len = 128
         num_epoch = 2
+    elif args.dataset.lower() == "lcqmc":
+        dataset = hub.dataset.LCQMC()
+        module = hub.Module(name="roberta_wwm_ext_chinese_L-24_H-1024_A-16")
+        metrics_choices = ["acc"]
+        batch_size = 16
+        max_seq_len = 128
+        num_epoch = 3
     else:
         raise ValueError("%s dataset is not defined" % args.dataset)
 

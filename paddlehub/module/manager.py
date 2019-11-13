@@ -153,3 +153,4 @@ class LocalModuleManager(object):
 
 
 default_module_manager = LocalModuleManager()
+LocalModuleManager

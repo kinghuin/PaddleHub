@@ -178,14 +178,19 @@ if __name__ == '__main__':
         metrics_choices=metrics_choices)
 
     # Data to be prdicted
-    data = [[d.text_a, d.text_b] for d in dataset.get_dev_examples()[:3]]
+    data = [[d.text_a, d.text_b] for d in dataset.get_test_examples()]
 
     index = 0
     run_states = cls_task.predict(data=data)
-    results = [run_state.run_results for run_state in run_states]
-    for batch_result in results:
-        # get predict index
-        batch_result = np.argmax(batch_result, axis=2)[0]
-        for result in batch_result:
-            print("%s\tpredict=%s" % (data[index][0], result))
-            index += 1
+    with open(os.path.join(args.dataset.lower(), "_predict.txt")) as fout:
+        results = [run_state.run_results for run_state in run_states]
+        for batch_result in results:
+            # get predict index
+            batch_result = np.argmax(batch_result, axis=2)[0]
+            for result in batch_result:
+                # print("%s\tpredict=%s" % (data[index][0], result))
+                # index += 1
+                if index < 3:
+                    print("%s\tpredict=%s" % (data[index][0], result))
+                fout.write(result + "\n")
+                index += 1

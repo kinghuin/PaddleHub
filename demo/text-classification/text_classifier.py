@@ -70,21 +70,35 @@ def finetune(args):
         batch_size = 16
         max_seq_len = 128
         num_epoch = 3
+    elif args.dataset.lower() == "msraner":
+        dataset = hub.dataset.MSRA_NER()
+        module = hub.Module(name="roberta_wwm_ext_chinese_L-24_H-1024_A-16")
+        metrics_choices = ["acc"]
+        batch_size = 16
+        max_seq_len = 256
+        num_epoch = 5
     else:
         raise ValueError("%s dataset is not defined" % args.dataset)
-
     inputs, outputs, program = module.context(
         trainable=True, max_seq_len=max_seq_len)
-    reader = hub.reader.ClassifyReader(
-        dataset=dataset,
-        vocab_path=module.get_vocab_path(),
-        max_seq_len=max_seq_len,
-        use_task_id=False)
+
+    if args.dataset.lower() == "msraner":
+        reader = hub.reader.SequenceLabelReader(
+            dataset=dataset,
+            vocab_path=module.get_vocab_path(),
+            max_seq_len=max_seq_len)
+        sequence_output = outputs["sequence_output"]
+    else:
+        reader = hub.reader.ClassifyReader(
+            dataset=dataset,
+            vocab_path=module.get_vocab_path(),
+            max_seq_len=max_seq_len,
+            use_task_id=False)
+        pooled_output = outputs["pooled_output"]
 
     # Construct transfer learning network
     # Use "pooled_output" for classification tasks on an entire sentence.
     # Use "sequence_output" for token-level output.
-    pooled_output = outputs["pooled_output"]
 
     # Setup feed list for data feeder
     # Must feed all the tensor of module need
@@ -125,13 +139,23 @@ def finetune(args):
         strategy=strategy)
 
     # Define a classfication finetune task by PaddleHub's API
-    cls_task = hub.TextClassifierTask(
-        data_reader=reader,
-        feature=pooled_output,
-        feed_list=feed_list,
-        num_classes=dataset.num_labels,
-        config=config,
-        metrics_choices=metrics_choices)
+    if args.dataset.lower() == "msraner":
+        cls_task = hub.SequenceLabelTask(
+            data_reader=reader,
+            feature=sequence_output,
+            feed_list=feed_list,
+            max_seq_len=max_seq_len,
+            num_classes=dataset.num_labels,
+            config=config,
+            add_crf=True)
+    else:
+        cls_task = hub.TextClassifierTask(
+            data_reader=reader,
+            feature=pooled_output,
+            feed_list=feed_list,
+            num_classes=dataset.num_labels,
+            config=config,
+            metrics_choices=metrics_choices)
 
     # Load model from the defined model path or not
     if args.model_path != "":

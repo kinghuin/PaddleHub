@@ -182,7 +182,7 @@ if __name__ == '__main__':
 
     index = 0
     run_states = cls_task.predict(data=data)
-    with open(args.dataset.lower(), "_predict.txt") as fout:
+    with open(args.dataset.lower() + "_predict.txt", "w") as fout:
         results = [run_state.run_results for run_state in run_states]
         for batch_result in results:
             # get predict index

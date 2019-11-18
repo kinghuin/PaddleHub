@@ -182,7 +182,7 @@ if __name__ == '__main__':
 
     index = 0
     run_states = cls_task.predict(data=data)
-    with open(os.path.join(args.dataset.lower(), "_predict.txt")) as fout:
+    with open(args.dataset.lower(), "_predict.txt") as fout:
         results = [run_state.run_results for run_state in run_states]
         for batch_result in results:
             # get predict index
@@ -192,5 +192,5 @@ if __name__ == '__main__':
                 # index += 1
                 if index < 3:
                     print("%s\tpredict=%s" % (data[index][0], result))
-                fout.write(result + "\n")
+                fout.write(str(result) + "\n")
                 index += 1

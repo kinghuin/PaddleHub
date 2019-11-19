@@ -191,6 +191,8 @@ if __name__ == '__main__':
                 # print("%s\tpredict=%s" % (data[index][0], result))
                 # index += 1
                 if index < 3:
-                    print("%s\tpredict=%s" % (data[index][0], result))
-                fout.write(str(result) + "\n")
+                    print("%s\tpredict=%s,%s" %
+                          (data[index][0], result,
+                           dataset.get_labels()[int(result)]))
+                fout.write(dataset.get_labels()[int(result)] + "\n")
                 index += 1

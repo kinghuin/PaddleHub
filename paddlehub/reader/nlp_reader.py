@@ -525,6 +525,7 @@ class SequenceLabelReader(BaseReader):
                 tokens = tokens[0:(max_seq_length - 2)]
 
             tokens = ["[CLS]"] + tokens + ["[SEP]"]
+            print(tokens)
             token_ids = tokenizer.convert_tokens_to_ids(tokens)
             position_ids = list(range(len(token_ids)))
             text_type_ids = [0] * len(token_ids)

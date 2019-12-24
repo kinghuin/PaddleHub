@@ -795,6 +795,7 @@ class BasicTask(object):
         period_run_states = []
 
         for run_step, batch in enumerate(self.reader(), start=1):
+            print(batch)
             if self.config.use_data_parallel and len(batch) < self.device_count:
                 continue
             step_run_state = RunState(len(self.fetch_list))

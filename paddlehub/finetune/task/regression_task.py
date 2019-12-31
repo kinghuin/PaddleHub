@@ -50,6 +50,8 @@ class RegressionTask(BaseTask):
         self.hidden_units = hidden_units
 
     def _build_net(self):
+        self.guid = fluid.layers.data(name="guid", shape=[-1], dtype='int64')
+
         cls_feats = fluid.layers.dropout(
             x=self.feature,
             dropout_prob=0.1,
@@ -84,12 +86,20 @@ class RegressionTask(BaseTask):
         return []
 
     @property
+    def feed_list(self):
+        feed_list = [varname
+                     for varname in self._base_feed_list] + [self.guid.name]
+        if self.is_train_phase or self.is_test_phase:
+            feed_list += [label.name for label in self.labels]
+        return feed_list
+
+    @property
     def fetch_list(self):
         if self.is_train_phase or self.is_test_phase:
             return [self.labels[0].name, self.outputs[0].name
                     ] + [metric.name
                          for metric in self.metrics] + [self.loss.name]
-        return [output.name for output in self.outputs]
+        return [output.name for output in self.outputs] + [self.guid.name]
 
     def _calculate_metrics(self, run_states):
         loss_sum = run_examples = 0
@@ -122,8 +132,13 @@ class RegressionTask(BaseTask):
         return scores, avg_loss, run_speed
 
     def _postprocessing(self, run_states):
-        results = []
+        results = {}
         for batch_state in run_states:
-            batch_result = batch_state.run_results[0]
-            results += [result[0] for result in batch_result]
-        return results
+            batch_results = batch_state.run_results
+            batch_infers = batch_results[0]
+            batch_guids = batch_results[1].reshape([-1]).astype(
+                np.int32).tolist()
+            for i in range(len(batch_guids)):
+                results[batch_guids[i]] = batch_infers[i][0]
+        sorted_results = [results[key] for key in sorted(results.keys())]
+        return sorted_results

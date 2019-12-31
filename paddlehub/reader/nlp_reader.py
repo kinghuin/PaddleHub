@@ -69,9 +69,9 @@ class BaseNLPReader(BaseReader):
 
         self.Record_With_Label_Id = namedtuple(
             'Record',
-            ['token_ids', 'text_type_ids', 'position_ids', 'label_id'])
+            ["guid", 'token_ids', 'text_type_ids', 'position_ids', 'label_id'])
         self.Record_Wo_Label_Id = namedtuple(
-            'Record', ['token_ids', 'text_type_ids', 'position_ids'])
+            'Record', ["guid", 'token_ids', 'text_type_ids', 'position_ids'])
 
     def _truncate_seq_pair(self, tokens_a, tokens_b, max_length):
         """Truncates a sequence pair in place to the maximum length."""
@@ -162,12 +162,14 @@ class BaseNLPReader(BaseReader):
 
         if phase != "predict":
             record = self.Record_With_Label_Id(
+                guid=example.guid,
                 token_ids=token_ids,
                 text_type_ids=text_type_ids,
                 position_ids=position_ids,
                 label_id=label_id)
         else:
             record = self.Record_Wo_Label_Id(
+                guid=example.guid,
                 token_ids=token_ids,
                 text_type_ids=text_type_ids,
                 position_ids=position_ids)
@@ -220,30 +222,39 @@ class BaseNLPReader(BaseReader):
             self.num_examples['test'] = len(examples)
         elif phase == 'predict':
             shuffle = False
-            examples = []
-            seq_id = 0
+            if data:
+                examples = []
+                seq_id = 0
 
-            for item in data:
-                # set label in order to run the program
-                if self.dataset:
-                    label = list(self.label_map.keys())[0]
-                else:
-                    label = 0
-                if len(item) == 1:
-                    item_i = InputExample(
-                        guid=seq_id, text_a=item[0], label=label)
-                elif len(item) == 2:
-                    item_i = InputExample(
-                        guid=seq_id,
-                        text_a=item[0],
-                        text_b=item[1],
-                        label=label)
+                for item in data:
+                    # set label in order to run the program
+                    if self.dataset:
+                        label = list(self.label_map.keys())[0]
+                    else:
+                        label = 0
+                    if len(item) == 1:
+                        item_i = InputExample(
+                            guid=seq_id, text_a=item[0], label=label)
+                    elif len(item) == 2:
+                        item_i = InputExample(
+                            guid=seq_id,
+                            text_a=item[0],
+                            text_b=item[1],
+                            label=label)
+                    else:
+                        raise ValueError(
+                            "The length of input_text is out of handling, which must be 1 or 2!"
+                        )
+                    examples.append(item_i)
+                    seq_id += 1
+            else:
+                examples = self.get_predict_examples()
+                if examples:
+                    self.num_examples['predict'] = len(examples)
                 else:
                     raise ValueError(
-                        "The length of input_text is out of handling, which must be 1 or 2!"
+                        "The predict set is empty, please assign the 'data' parameter"
                     )
-                examples.append(item_i)
-                seq_id += 1
         else:
             raise ValueError(
                 "Unknown phase, which should be in ['train', 'dev', 'test', 'predict']."
@@ -265,6 +276,7 @@ class ClassifyReader(BaseNLPReader):
         batch_token_ids = [record.token_ids for record in batch_records]
         batch_text_type_ids = [record.text_type_ids for record in batch_records]
         batch_position_ids = [record.position_ids for record in batch_records]
+        batch_guids = [record.guid for record in batch_records]
 
         padded_token_ids, input_mask = pad_batch_data(
             batch_token_ids,
@@ -287,7 +299,7 @@ class ClassifyReader(BaseNLPReader):
 
             return_list = [
                 padded_token_ids, padded_position_ids, padded_text_type_ids,
-                input_mask, batch_labels
+                input_mask, batch_labels, batch_guids
             ]
 
             if self.use_task_id:
@@ -295,12 +307,12 @@ class ClassifyReader(BaseNLPReader):
                     padded_token_ids, dtype="int64") * self.task_id
                 return_list = [
                     padded_token_ids, padded_position_ids, padded_text_type_ids,
-                    input_mask, padded_task_ids, batch_labels
+                    input_mask, padded_task_ids, batch_labels, batch_guids
                 ]
         else:
             return_list = [
                 padded_token_ids, padded_position_ids, padded_text_type_ids,
-                input_mask
+                input_mask, batch_guids
             ]
 
             if self.use_task_id:
@@ -308,7 +320,7 @@ class ClassifyReader(BaseNLPReader):
                     padded_token_ids, dtype="int64") * self.task_id
                 return_list = [
                     padded_token_ids, padded_position_ids, padded_text_type_ids,
-                    input_mask, padded_task_ids
+                    input_mask, padded_task_ids, batch_guids
                 ]
         return return_list
 
@@ -346,6 +358,7 @@ class SequenceLabelReader(BaseNLPReader):
         batch_token_ids = [record.token_ids for record in batch_records]
         batch_text_type_ids = [record.text_type_ids for record in batch_records]
         batch_position_ids = [record.position_ids for record in batch_records]
+        batch_guids = [record.guid for record in batch_records]
 
         # padding
         padded_token_ids, input_mask, batch_seq_lens = pad_batch_data(
@@ -372,7 +385,7 @@ class SequenceLabelReader(BaseNLPReader):
 
             return_list = [
                 padded_token_ids, padded_position_ids, padded_text_type_ids,
-                input_mask, padded_label_ids, batch_seq_lens
+                input_mask, padded_label_ids, batch_seq_lens, batch_guids
             ]
 
             if self.use_task_id:
@@ -381,13 +394,13 @@ class SequenceLabelReader(BaseNLPReader):
                 return_list = [
                     padded_token_ids, padded_position_ids, padded_text_type_ids,
                     input_mask, padded_task_ids, padded_label_ids,
-                    batch_seq_lens
+                    batch_seq_lens, batch_guids
                 ]
 
         else:
             return_list = [
                 padded_token_ids, padded_position_ids, padded_text_type_ids,
-                input_mask, batch_seq_lens
+                input_mask, batch_seq_lens, batch_guids
             ]
 
             if self.use_task_id:
@@ -395,7 +408,7 @@ class SequenceLabelReader(BaseNLPReader):
                     padded_token_ids, dtype="int64") * self.task_id
                 return_list = [
                     padded_token_ids, padded_position_ids, padded_text_type_ids,
-                    input_mask, padded_task_ids, batch_seq_lens
+                    input_mask, padded_task_ids, batch_seq_lens, batch_guids
                 ]
 
         return return_list
@@ -462,6 +475,7 @@ class SequenceLabelReader(BaseNLPReader):
                          ] + [self.label_map[label]
                               for label in labels] + [no_entity_id]
             record = self.Record_With_Label_Id(
+                guid=example.guid,
                 token_ids=token_ids,
                 text_type_ids=text_type_ids,
                 position_ids=position_ids,
@@ -479,6 +493,7 @@ class SequenceLabelReader(BaseNLPReader):
             text_type_ids = [0] * len(token_ids)
 
             record = self.Record_Wo_Label_Id(
+                guid=example.guid,
                 token_ids=token_ids,
                 text_type_ids=text_type_ids,
                 position_ids=position_ids,
@@ -492,6 +507,7 @@ class MultiLabelClassifyReader(BaseNLPReader):
         batch_token_ids = [record.token_ids for record in batch_records]
         batch_text_type_ids = [record.text_type_ids for record in batch_records]
         batch_position_ids = [record.position_ids for record in batch_records]
+        batch_guids = [record.guid for record in batch_records]
 
         # padding
         padded_token_ids, input_mask = pad_batch_data(
@@ -516,7 +532,7 @@ class MultiLabelClassifyReader(BaseNLPReader):
 
             return_list = [
                 padded_token_ids, padded_position_ids, padded_text_type_ids,
-                input_mask, batch_labels
+                input_mask, batch_labels, batch_guids
             ]
 
             if self.use_task_id:
@@ -524,12 +540,12 @@ class MultiLabelClassifyReader(BaseNLPReader):
                     padded_token_ids, dtype="int64") * self.task_id
                 return_list = [
                     padded_token_ids, padded_position_ids, padded_text_type_ids,
-                    input_mask, padded_task_ids, batch_labels
+                    input_mask, padded_task_ids, batch_labels, batch_guids
                 ]
         else:
             return_list = [
                 padded_token_ids, padded_position_ids, padded_text_type_ids,
-                input_mask
+                input_mask, batch_guids
             ]
 
             if self.use_task_id:
@@ -537,7 +553,7 @@ class MultiLabelClassifyReader(BaseNLPReader):
                     padded_token_ids, dtype="int64") * self.task_id
                 return_list = [
                     padded_token_ids, padded_position_ids, padded_text_type_ids,
-                    input_mask, padded_task_ids
+                    input_mask, padded_task_ids, batch_guids
                 ]
         return return_list
 
@@ -595,12 +611,14 @@ class MultiLabelClassifyReader(BaseNLPReader):
 
         if phase != "predict":
             record = self.Record_With_Label_Id(
+                guid=example.guid,
                 token_ids=token_ids,
                 text_type_ids=text_type_ids,
                 position_ids=position_ids,
                 label_id=label_ids)
         else:
             record = self.Record_Wo_Label_Id(
+                guid=example.guid,
                 token_ids=token_ids,
                 text_type_ids=text_type_ids,
                 position_ids=position_ids)
@@ -613,6 +631,7 @@ class RegressionReader(BaseNLPReader):
         batch_token_ids = [record.token_ids for record in batch_records]
         batch_text_type_ids = [record.text_type_ids for record in batch_records]
         batch_position_ids = [record.position_ids for record in batch_records]
+        batch_guids = [record.guid for record in batch_records]
 
         padded_token_ids, input_mask = pad_batch_data(
             batch_token_ids,
@@ -636,7 +655,7 @@ class RegressionReader(BaseNLPReader):
 
             return_list = [
                 padded_token_ids, padded_position_ids, padded_text_type_ids,
-                input_mask, batch_labels
+                input_mask, batch_labels, batch_guids
             ]
 
             if self.use_task_id:
@@ -644,12 +663,12 @@ class RegressionReader(BaseNLPReader):
                     padded_token_ids, dtype="int64") * self.task_id
                 return_list = [
                     padded_token_ids, padded_position_ids, padded_text_type_ids,
-                    input_mask, padded_task_ids, batch_labels
+                    input_mask, padded_task_ids, batch_labels, batch_guids
                 ]
         else:
             return_list = [
                 padded_token_ids, padded_position_ids, padded_text_type_ids,
-                input_mask
+                input_mask, batch_guids
             ]
 
             if self.use_task_id:
@@ -657,7 +676,7 @@ class RegressionReader(BaseNLPReader):
                     padded_token_ids, dtype="int64") * self.task_id
                 return_list = [
                     padded_token_ids, padded_position_ids, padded_text_type_ids,
-                    input_mask, padded_task_ids
+                    input_mask, padded_task_ids, batch_guids
                 ]
 
         return return_list

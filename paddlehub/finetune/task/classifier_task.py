@@ -179,6 +179,7 @@ class TextClassifierTask(ClassifierTask):
             metrics_choices=metrics_choices)
 
     def _build_net(self):
+        self.guid = fluid.layers.data(name="guid", shape=[-1], dtype='int64')
         cls_feats = fluid.layers.dropout(
             x=self.feature,
             dropout_prob=0.1,
@@ -203,6 +204,46 @@ class TextClassifierTask(ClassifierTask):
             x=fluid.layers.argmax(logits, axis=1), shape=[-1, 1])
 
         return [logits]
+
+    @property
+    def feed_list(self):
+        feed_list = [varname
+                     for varname in self._base_feed_list] + [self.guid.name]
+        if self.is_train_phase or self.is_test_phase:
+            feed_list += [label.name for label in self.labels]
+        return feed_list
+
+    @property
+    def fetch_list(self):
+        if self.is_train_phase or self.is_test_phase:
+            return [self.labels[0].name, self.ret_infers.name
+                    ] + [metric.name
+                         for metric in self.metrics] + [self.loss.name]
+        return [output.name for output in self.outputs] + [self.guid.name]
+
+    def _postprocessing(self, run_states):
+        try:
+            id2label = {
+                val: key
+                for key, val in self._base_data_reader.label_map.items()
+            }
+        except:
+            raise Exception(
+                "ImageClassificationDataset does not support postprocessing, please use BaseCVDatast instead"
+            )
+        results = {}
+        for batch_state in run_states:
+            batch_result = batch_state.run_results
+            batch_infer = np.argmax([batch_result[0]], axis=2)[0]
+            batch_guids = batch_result[1].reshape([-1]).astype(
+                np.int32).tolist()
+            for i in range(len(batch_guids)):
+                sample_infer = batch_infer[i]
+                sample_prediction = id2label[sample_infer]
+                sample_guid = batch_guids[i]
+                results[sample_guid] = sample_prediction
+        sorted_results = [results[key] for key in sorted(results.keys())]
+        return sorted_results
 
 
 class MultiLabelClassifierTask(ClassifierTask):
@@ -231,6 +272,7 @@ class MultiLabelClassifierTask(ClassifierTask):
         self.class_name = list(data_reader.label_map.keys())
 
     def _build_net(self):
+        self.guid = fluid.layers.data(name="guid", shape=[-1], dtype='int64')
         cls_feats = fluid.layers.dropout(
             x=self.feature,
             dropout_prob=0.1,
@@ -317,20 +359,32 @@ class MultiLabelClassifierTask(ClassifierTask):
     def fetch_list(self):
         if self.is_train_phase or self.is_test_phase:
             return [metric.name for metric in self.metrics] + [self.loss.name]
-        return self.outputs
+        return [output.name for output in self.outputs] + [self.guid.name]
+
+    @property
+    def feed_list(self):
+        feed_list = [varname
+                     for varname in self._base_feed_list] + [self.guid.name]
+        if self.is_train_phase or self.is_test_phase:
+            feed_list += [label.name for label in self.labels]
+        return feed_list
 
     def _postprocessing(self, run_states):
-        results = []
+        results = {}
         label_list = list(self._base_data_reader.label_map.keys())
         for batch_state in run_states:
             batch_result = batch_state.run_results
-            for sample_id in range(len(batch_result[0])):
+            batch_infers = batch_result[:-1]
+            batch_guids = batch_result[-1].reshape([-1]).astype(
+                np.int32).tolist()
+            for sample_id in range(len(batch_infers[0])):
                 sample_result = []
                 for category_id in range(
                         self._base_data_reader.dataset.num_labels):
-                    sample_category_prob = batch_result[category_id][sample_id]
+                    sample_category_prob = batch_infers[category_id][sample_id]
                     sample_category_value = np.argmax(sample_category_prob)
                     sample_result.append(
                         {label_list[category_id]: sample_category_value})
-                results.append(sample_result)
-        return results
+                results[batch_guids[sample_id]] = sample_result
+        sorted_results = [results[key] for key in sorted(results.keys())]
+        return sorted_results

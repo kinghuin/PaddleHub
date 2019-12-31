@@ -64,15 +64,13 @@ class SequenceLabelTask(BaseTask):
             return True
 
     def _build_net(self):
+        self.guid = fluid.layers.data(name="guid", shape=[-1], dtype='int64')
         if version_compare(paddle.__version__, "1.6"):
             self.seq_len = fluid.layers.data(
                 name="seq_len", shape=[-1], dtype='int64')
-            self.guid = fluid.layers.data(
-                name="guid", shape=[-1], dtype='int64')
         else:
             self.seq_len = fluid.layers.data(
                 name="seq_len", shape=[1], dtype='int64')
-            self.guid = fluid.layers.data(name="guid", shape=[1], dtype='int64')
         seq_len = fluid.layers.assign(self.seq_len)
 
         if self.add_crf:

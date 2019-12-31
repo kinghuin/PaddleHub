@@ -54,7 +54,7 @@ class Toxic(BaseNLPDatast):
         data = pd.read_csv(input_file, encoding="UTF-8")
         examples = []
         for index, row in data.iterrows():
-            guid = row["id"]
+            guid = index
             text = row["comment_text"]
             labels = [int(value) for value in row[2:]]
             example = InputExample(guid=guid, label=labels, text_a=text)

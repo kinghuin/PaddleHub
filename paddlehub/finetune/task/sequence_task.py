@@ -67,9 +67,12 @@ class SequenceLabelTask(BaseTask):
         if version_compare(paddle.__version__, "1.6"):
             self.seq_len = fluid.layers.data(
                 name="seq_len", shape=[-1], dtype='int64')
+            self.guid = fluid.layers.data(
+                name="guid", shape=[-1], dtype='int64')
         else:
             self.seq_len = fluid.layers.data(
                 name="seq_len", shape=[1], dtype='int64')
+            self.guid = fluid.layers.data(name="guid", shape=[1], dtype='int64')
         seq_len = fluid.layers.assign(self.seq_len)
 
         if self.add_crf:
@@ -204,9 +207,11 @@ class SequenceLabelTask(BaseTask):
     def feed_list(self):
         feed_list = [varname for varname in self._base_feed_list]
         if self.is_train_phase or self.is_test_phase:
-            feed_list += [self.labels[0].name, self.seq_len.name]
+            feed_list += [
+                self.labels[0].name, self.seq_len.name, self.guid.name
+            ]
         else:
-            feed_list += [self.seq_len.name]
+            feed_list += [self.seq_len.name, self.guid.name]
         return feed_list
 
     @property
@@ -214,7 +219,8 @@ class SequenceLabelTask(BaseTask):
         if self.is_train_phase or self.is_test_phase:
             return [metric.name for metric in self.metrics] + [self.loss.name]
         elif self.is_predict_phase:
-            return [self.ret_infers.name] + [self.seq_len.name]
+            return [self.ret_infers.name] + [self.seq_len.name
+                                             ] + [self.guid.name]
         return [output.name for output in self.outputs]
 
     def _postprocessing(self, run_states):
@@ -222,16 +228,19 @@ class SequenceLabelTask(BaseTask):
             val: key
             for key, val in self._base_data_reader.label_map.items()
         }
-        results = []
+        results = {}
         for batch_states in run_states:
             batch_results = batch_states.run_results
             batch_infers = batch_results[0].reshape([-1]).astype(
                 np.int32).tolist()
             seq_lens = batch_results[1].reshape([-1]).astype(np.int32).tolist()
+            batch_guids = batch_results[2].reshape([-1]).astype(
+                np.int32).tolist()
             current_id = 0
-            for length in seq_lens:
+            for i, length in enumerate(seq_lens):
                 seq_infers = batch_infers[current_id:current_id + length]
                 seq_result = list(map(id2label.get, seq_infers[1:-1]))
                 current_id += length if self.add_crf else self.max_seq_len
-                results.append(seq_result)
-        return results
+                results[batch_guids[i]] = seq_result
+        sorted_results = [results[key] for key in sorted(results.keys())]
+        return sorted_results

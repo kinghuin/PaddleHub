@@ -203,13 +203,10 @@ class SequenceLabelTask(BaseTask):
 
     @property
     def feed_list(self):
-        feed_list = [varname for varname in self._base_feed_list]
+        feed_list = [varname for varname in self._base_feed_list
+                     ] + [self.guid.name, self.seq_len.name]
         if self.is_train_phase or self.is_test_phase:
-            feed_list += [
-                self.labels[0].name, self.seq_len.name, self.guid.name
-            ]
-        else:
-            feed_list += [self.seq_len.name, self.guid.name]
+            feed_list += [self.labels[0].name]
         return feed_list
 
     @property

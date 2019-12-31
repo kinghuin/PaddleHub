@@ -299,7 +299,7 @@ class ClassifyReader(BaseNLPReader):
 
             return_list = [
                 padded_token_ids, padded_position_ids, padded_text_type_ids,
-                input_mask, batch_labels, batch_guids
+                input_mask, batch_guids, batch_labels
             ]
 
             if self.use_task_id:
@@ -307,7 +307,7 @@ class ClassifyReader(BaseNLPReader):
                     padded_token_ids, dtype="int64") * self.task_id
                 return_list = [
                     padded_token_ids, padded_position_ids, padded_text_type_ids,
-                    input_mask, padded_task_ids, batch_labels, batch_guids
+                    input_mask, padded_task_ids, batch_guids, batch_labels
                 ]
         else:
             return_list = [
@@ -385,22 +385,27 @@ class SequenceLabelReader(BaseNLPReader):
 
             return_list = [
                 padded_token_ids, padded_position_ids, padded_text_type_ids,
-                input_mask, padded_label_ids, batch_seq_lens, batch_guids
+                input_mask, batch_guids, batch_seq_lens, padded_label_ids
             ]
 
             if self.use_task_id:
                 padded_task_ids = np.ones_like(
                     padded_token_ids, dtype="int64") * self.task_id
                 return_list = [
-                    padded_token_ids, padded_position_ids, padded_text_type_ids,
-                    input_mask, padded_task_ids, padded_label_ids,
-                    batch_seq_lens, batch_guids
+                    padded_token_ids,
+                    padded_position_ids,
+                    padded_text_type_ids,
+                    input_mask,
+                    padded_task_ids,
+                    batch_guids,
+                    batch_seq_lens,
+                    padded_label_ids,
                 ]
 
         else:
             return_list = [
                 padded_token_ids, padded_position_ids, padded_text_type_ids,
-                input_mask, batch_seq_lens, batch_guids
+                input_mask, batch_guids, batch_seq_lens
             ]
 
             if self.use_task_id:
@@ -408,7 +413,7 @@ class SequenceLabelReader(BaseNLPReader):
                     padded_token_ids, dtype="int64") * self.task_id
                 return_list = [
                     padded_token_ids, padded_position_ids, padded_text_type_ids,
-                    input_mask, padded_task_ids, batch_seq_lens, batch_guids
+                    input_mask, padded_task_ids, batch_guids, batch_seq_lens
                 ]
 
         return return_list
@@ -532,7 +537,7 @@ class MultiLabelClassifyReader(BaseNLPReader):
 
             return_list = [
                 padded_token_ids, padded_position_ids, padded_text_type_ids,
-                input_mask, batch_labels, batch_guids
+                input_mask, batch_guids, batch_labels
             ]
 
             if self.use_task_id:
@@ -540,7 +545,7 @@ class MultiLabelClassifyReader(BaseNLPReader):
                     padded_token_ids, dtype="int64") * self.task_id
                 return_list = [
                     padded_token_ids, padded_position_ids, padded_text_type_ids,
-                    input_mask, padded_task_ids, batch_labels, batch_guids
+                    input_mask, padded_task_ids, batch_guids, batch_labels
                 ]
         else:
             return_list = [
@@ -655,7 +660,7 @@ class RegressionReader(BaseNLPReader):
 
             return_list = [
                 padded_token_ids, padded_position_ids, padded_text_type_ids,
-                input_mask, batch_labels, batch_guids
+                input_mask, batch_guids, batch_labels
             ]
 
             if self.use_task_id:
@@ -663,7 +668,7 @@ class RegressionReader(BaseNLPReader):
                     padded_token_ids, dtype="int64") * self.task_id
                 return_list = [
                     padded_token_ids, padded_position_ids, padded_text_type_ids,
-                    input_mask, padded_task_ids, batch_labels, batch_guids
+                    input_mask, padded_task_ids, batch_guids, batch_labels
                 ]
         else:
             return_list = [

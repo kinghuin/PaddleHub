@@ -135,14 +135,16 @@ class ImageClassificationReader(BaseReader):
         def _data_reader():
             if shuffle:
                 np.random.shuffle(data)
-
+            guid = 0
             if phase == "predict":
                 for image_path in data:
                     image = preprocess(image_path)
-                    yield (image, )
+                    yield (image, guid)
+                    guid += 1
             else:
                 for image_path, label in data:
                     image = preprocess(image_path)
-                    yield (image, label)
+                    yield (image, label, guid)
+                    guid += 1
 
         return paddle.batch(_data_reader, batch_size=batch_size)

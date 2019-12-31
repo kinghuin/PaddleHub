@@ -20,7 +20,8 @@ from __future__ import print_function
 import io
 import os
 
-from paddlehub.dataset import InputExample, BaseDataset
+from paddlehub.dataset import InputExample
+from paddlehub.dataset.base_nlp_dataset import BaseNLPDatast
 from paddlehub.common.dir import DATA_HOME
 
 _DATA_URL = "https://bj.bcebos.com/paddlehub-dataset/tnews.tar.gz"
@@ -44,7 +45,7 @@ LABEL_NAME = {
 }
 
 
-class TNews(BaseDataset):
+class TNews(BaseNLPDatast):
     """
     TNews is the chinese news classification dataset on Jinri Toutiao App.
     """

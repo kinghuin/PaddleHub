@@ -53,6 +53,7 @@ class ClassifierTask(BaseTask):
         self.hidden_units = hidden_units
 
     def _build_net(self):
+        self.guid = fluid.layers.data(name="guid", shape=[-1], dtype='int64')
         cls_feats = self.feature
         if self.hidden_units is not None:
             for n_hidden in self.hidden_units:
@@ -87,12 +88,20 @@ class ClassifierTask(BaseTask):
         return [acc]
 
     @property
+    def feed_list(self):
+        feed_list = [varname
+                     for varname in self._base_feed_list] + [self.guid.name]
+        if self.is_train_phase or self.is_test_phase:
+            feed_list += [label.name for label in self.labels]
+        return feed_list
+
+    @property
     def fetch_list(self):
         if self.is_train_phase or self.is_test_phase:
             return [self.labels[0].name, self.ret_infers.name
                     ] + [metric.name
                          for metric in self.metrics] + [self.loss.name]
-        return [output.name for output in self.outputs]
+        return [output.name for output in self.outputs] + [self.guid.name]
 
     def _calculate_metrics(self, run_states):
         loss_sum = acc_sum = run_examples = 0
@@ -144,12 +153,19 @@ class ClassifierTask(BaseTask):
             raise Exception(
                 "ImageClassificationDataset does not support postprocessing, please use BaseCVDatast instead"
             )
-        results = []
+        results = {}
         for batch_state in run_states:
             batch_result = batch_state.run_results
-            batch_infer = np.argmax(batch_result, axis=2)[0]
-            results += [id2label[sample_infer] for sample_infer in batch_infer]
-        return results
+            batch_infer = np.argmax([batch_result[0]], axis=2)[0]
+            batch_guids = batch_result[1].reshape([-1]).astype(
+                np.int32).tolist()
+            for i in range(len(batch_guids)):
+                sample_infer = batch_infer[i]
+                sample_prediction = id2label[sample_infer]
+                sample_guid = batch_guids[i]
+                results[sample_guid] = sample_prediction
+        sorted_results = [results[key] for key in sorted(results.keys())]
+        return sorted_results
 
 
 ImageClassifierTask = ClassifierTask
@@ -220,30 +236,6 @@ class TextClassifierTask(ClassifierTask):
                     ] + [metric.name
                          for metric in self.metrics] + [self.loss.name]
         return [output.name for output in self.outputs] + [self.guid.name]
-
-    def _postprocessing(self, run_states):
-        try:
-            id2label = {
-                val: key
-                for key, val in self._base_data_reader.label_map.items()
-            }
-        except:
-            raise Exception(
-                "ImageClassificationDataset does not support postprocessing, please use BaseCVDatast instead"
-            )
-        results = {}
-        for batch_state in run_states:
-            batch_result = batch_state.run_results
-            batch_infer = np.argmax([batch_result[0]], axis=2)[0]
-            batch_guids = batch_result[1].reshape([-1]).astype(
-                np.int32).tolist()
-            for i in range(len(batch_guids)):
-                sample_infer = batch_infer[i]
-                sample_prediction = id2label[sample_infer]
-                sample_guid = batch_guids[i]
-                results[sample_guid] = sample_prediction
-        sorted_results = [results[key] for key in sorted(results.keys())]
-        return sorted_results
 
 
 class MultiLabelClassifierTask(ClassifierTask):

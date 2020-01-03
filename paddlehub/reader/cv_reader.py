@@ -106,7 +106,8 @@ class ImageClassificationReader(BaseReader):
             self.num_examples['test'] = len(data)
         elif phase == "predict":
             shuffle = False
-            data = data
+            data = data if data else self.get_predict_examples()
+            self.num_examples['test'] = len(data)
 
         def preprocess(image_path):
             image = Image.open(image_path)

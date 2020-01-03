@@ -497,6 +497,10 @@ class BaseTask(object):
             data = None
         self.env.reader = self._base_data_reader.data_generator(
             batch_size=self.config.batch_size, phase=self.phase, data=data)
+        #TODO:
+        if self.is_predict_phase and self._base_data_reader.num_examples[
+                'predict'] % (self.config.batch_size * self.device_count):
+            logger.warning("")
         return self.env.reader
 
     @property

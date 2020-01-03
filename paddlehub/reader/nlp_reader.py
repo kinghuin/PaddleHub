@@ -249,12 +249,12 @@ class BaseNLPReader(BaseReader):
                     seq_id += 1
             else:
                 examples = self.get_predict_examples()
-                if examples:
-                    self.num_examples['predict'] = len(examples)
-                else:
-                    raise ValueError(
-                        "The predict set is empty, please assign the 'data' parameter"
-                    )
+            if examples:
+                self.num_examples['predict'] = len(examples)
+            else:
+                raise ValueError(
+                    "The predict set is empty, please assign the 'data' parameter"
+                )
         else:
             raise ValueError(
                 "Unknown phase, which should be in ['train', 'dev', 'test', 'predict']."

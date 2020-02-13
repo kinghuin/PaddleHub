@@ -39,7 +39,7 @@ if __name__ == '__main__':
     # Load Paddlehub BERT pretrained model
     module = hub.Module(name="bert_uncased_L-12_H-768_A-12")
     inputs, outputs, program = module.context(
-        trainable=True, max_seq_len=args.max_seq_len)
+        trainable=False, max_seq_len=args.max_seq_len)
 
     # Download dataset and use ReadingComprehensionReader to read dataset
     # If you wanna load SQuAD 2.0 dataset, just set version_2_with_negative as True

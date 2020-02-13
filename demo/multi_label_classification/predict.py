@@ -43,7 +43,7 @@ if __name__ == '__main__':
     # Load Paddlehub ERNIE 2.0 pretrained model
     module = hub.Module(name="ernie_v2_eng_base")
     inputs, outputs, program = module.context(
-        trainable=True, max_seq_len=args.max_seq_len)
+        trainable=False, max_seq_len=args.max_seq_len)
 
     # Download dataset and use MultiLabelReader to read dataset
     dataset = hub.dataset.Toxic()

@@ -29,7 +29,7 @@ module_map = {
 def predict(args):
     # Load Paddlehub  pretrained model
     module = hub.Module(name=args.module)
-    input_dict, output_dict, program = module.context(trainable=True)
+    input_dict, output_dict, program = module.context(trainable=False)
 
     # Download dataset
     if args.dataset.lower() == "flowers":

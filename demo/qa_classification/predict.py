@@ -40,7 +40,8 @@ args = parser.parse_args()
 if __name__ == '__main__':
     # loading Paddlehub ERNIE pretrained model
     module = hub.Module(name="ernie")
-    inputs, outputs, program = module.context(max_seq_len=args.max_seq_len)
+    inputs, outputs, program = module.context(
+        trainable=False, max_seq_len=args.max_seq_len)
 
     # Sentence classification  dataset reader
     dataset = hub.dataset.NLPCC_DBQA()

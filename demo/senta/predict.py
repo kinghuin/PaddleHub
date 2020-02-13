@@ -24,7 +24,7 @@ args = parser.parse_args()
 if __name__ == '__main__':
     # loading Paddlehub senta pretrained model
     module = hub.Module(name="senta_bilstm")
-    inputs, outputs, program = module.context(trainable=True)
+    inputs, outputs, program = module.context(trainable=False)
 
     # Download dataset and use LACClassifyReader to read dataset
     dataset = hub.dataset.ChnSentiCorp()

@@ -41,7 +41,7 @@ if __name__ == '__main__':
     # Load Paddlehub ERNIE Tiny pretrained model
     module = hub.Module(name="ernie_tiny")
     inputs, outputs, program = module.context(
-        trainable=True, max_seq_len=args.max_seq_len)
+        trainable=False, max_seq_len=args.max_seq_len)
 
     # Download dataset and use accuracy as metrics
     # Choose dataset: GLUE/XNLI/ChinesesGLUE/NLPCC-DBQA/LCQMC

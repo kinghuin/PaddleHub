@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
     # Load Paddlehub ERNIE Tiny pretrained model
     module = hub.Module(name="ernie_tiny")
-    inputs, outputs, program = module.context(
+    inputs, outputs, module_program = module.context(
         trainable=True, max_seq_len=args.max_seq_len, nets_num=3)
 
     # Download dataset and use accuracy as metrics
@@ -99,11 +99,13 @@ if __name__ == '__main__':
     # Define a classfication finetune task by PaddleHub's API
     cls_task = hub.PairwiseTask(
         data_reader=reader,
+        main_program=module_program,
         feature=pooled_output,
         feed_list=feed_list,
         num_classes=dataset.num_labels,
         config=config,
-        margin=0.1)
+        margin=0.1,
+    )
 
     # Finetune and evaluate by PaddleHub's API
     # will finish training, evaluation, testing, save model automatically

@@ -32,6 +32,7 @@ class PairwiseTask(BaseTask):
                  num_classes,
                  feed_list,
                  data_reader,
+                 main_program,
                  startup_program=None,
                  config=None,
                  hidden_units=None,
@@ -40,7 +41,6 @@ class PairwiseTask(BaseTask):
         if metrics_choices == "default":
             metrics_choices = ["acc"]
 
-        main_program = feature.block.program
         super(PairwiseTask, self).__init__(
             data_reader=data_reader,
             main_program=main_program,

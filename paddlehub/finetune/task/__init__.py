@@ -18,3 +18,4 @@ from .classifier_task import ClassifierTask, ImageClassifierTask, TextClassifier
 from .reading_comprehension_task import ReadingComprehensionTask
 from .regression_task import RegressionTask
 from .sequence_task import SequenceLabelTask
+from .pairwise_task import PairwiseTask

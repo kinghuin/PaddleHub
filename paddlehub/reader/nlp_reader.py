@@ -1208,5 +1208,269 @@ class LACClassifyReader(BaseReader):
         return paddle.batch(_data_reader, batch_size=batch_size)
 
 
+class PairwiseReader(BaseNLPReader):
+    def __init__(self,
+                 vocab_path,
+                 dataset=None,
+                 label_map_config=None,
+                 max_seq_len=512,
+                 do_lower_case=True,
+                 random_seed=None,
+                 use_task_id=False,
+                 sp_model_path=None,
+                 word_dict_path=None,
+                 in_tokens=False,
+                 nets_num=2,
+                 sampling_rate=0.5):
+        super(PairwiseReader, self).__init__(
+            vocab_path=vocab_path,
+            dataset=dataset,
+            label_map_config=label_map_config,
+            max_seq_len=max_seq_len,
+            do_lower_case=do_lower_case,
+            random_seed=random_seed,
+            use_task_id=use_task_id,
+            sp_model_path=sp_model_path,
+            word_dict_path=word_dict_path,
+            in_tokens=in_tokens)
+        self.nets_num = nets_num
+        if self.nets_num == 2:
+            self.Pairwise_Record = namedtuple(
+                'Record', ['query_pos_record', 'query_neg_record'])
+
+        elif self.nets_num == 3:
+            self.Pairwise_Record = namedtuple(
+                'Record', ['query_record', 'pos_record', 'neg_record'])
+        else:
+            raise ValueError(
+                "nets_num({}) should be in the range of [1, 3]".format(
+                    nets_num))
+
+    def data_generator(self,
+                       batch_size=1,
+                       phase='train',
+                       shuffle=True,
+                       data=None):
+        # add nagtive smapling
+        if phase != 'predict' and not self.dataset:
+            raise ValueError("The dataset is None ! It isn't allowed.")
+        if phase == 'train':
+            shuffle = True
+            sampling = True
+            examples = self.get_train_examples()
+            self.num_examples['train'] = len(examples)
+            qid_examples = {}
+            for example in examples:
+                if example.qid not in qid_examples:
+                    qid_examples[example.qid] = [example]
+                else:
+                    qid_examples[example.qid].append(example)
+        elif phase == 'val' or phase == 'dev':
+            shuffle = False
+            sampling = False
+            examples = self.get_dev_examples()
+            self.num_examples['dev'] = len(examples)
+        elif phase == 'test':
+            shuffle = False
+            sampling = False
+            examples = self.get_test_examples()
+            self.num_examples['test'] = len(examples)
+        elif phase == 'predict':
+            shuffle = False
+            sampling = False
+            examples = []
+            seq_id = 0
+
+            for item in data:
+                # set label in order to run the program
+                if self.dataset:
+                    label = list(self.label_map.keys())[0]
+                else:
+                    label = 0
+                if len(item) == 1:
+                    item_i = InputExample(
+                        guid=seq_id, text_a=item[0], label=label)
+                elif len(item) == 2:
+                    item_i = InputExample(
+                        guid=seq_id,
+                        text_a=item[0],
+                        text_b=item[1],
+                        label=label)
+                else:
+                    raise ValueError(
+                        "The length of input_text is out of handling, which must be 1 or 2!"
+                    )
+                examples.append(item_i)
+                seq_id += 1
+        else:
+            raise ValueError(
+                "Unknown phase, which should be in ['train', 'dev', 'test', 'predict']."
+            )
+
+        def wrapper():
+            if sampling:
+                examples = []
+                for qid, sub_examples in qid_examples.items():
+                    # at least one example
+                    least_id = np.random.randint(0, len(sub_examples))
+                    examples.append(sub_examples[least_id])
+                    sub_examples.pop(least_id)
+                    # drop some examples
+                    reserve_probs = np.random.rand(len(sub_examples))
+                    for i, reserve_prob in enumerate(reserve_probs):
+                        if reserve_prob > self.sampling_rate:
+                            examples.append(sub_examples[i])
+                        else:
+                            continue
+
+            if shuffle:
+                np.random.shuffle(examples)
+
+            for batch_data in self._prepare_batch_data(
+                    examples, batch_size, phase=phase):
+                yield [batch_data]
+
+        return wrapper
+
+    def _prepare_batch_data(self, examples, batch_size, phase=None):
+        """generate batch records"""
+        batch_records, max_len = [], 0
+        for index, example in enumerate(examples):
+            if phase == "train":
+                self.current_example = index
+            record = self._convert_example_to_record(example, self.max_seq_len,
+                                                     self.tokenizer, phase)
+            if phase == "train":
+                max_len = max(
+                    max_len,
+                    sum([len(sub_record.token_ids) for sub_record in record]))
+            else:
+                max_len = max(max_len, len(record.token_ids))
+            if self.in_tokens:
+                to_append = (len(batch_records) + 1) * max_len <= batch_size
+            else:
+                to_append = len(batch_records) < batch_size
+            if to_append:
+                batch_records.append(record)
+            else:
+                yield self._pad_batch_records(batch_records, phase)
+                batch_records, max_len = [record], len(record.token_ids)
+
+        if batch_records:
+            yield self._pad_batch_records(batch_records, phase)
+
+    def _convert_example_to_record(self,
+                                   example,
+                                   max_seq_length,
+                                   tokenizer,
+                                   phase=None):
+        """Converts a single `Example` into a single `Record`."""
+        if phase != "train":
+            return super(PairwiseReader, self)._convert_example_to_record(
+                example, max_seq_length, tokenizer, phase)
+        else:
+            query = example.query
+            pos = example.pos
+            neg = example.neg
+            guid = example.guid
+
+            if self.nets_num == 2:
+                query_pos_example = InputExample(
+                    guid=guid, label=None, text_a=query, text_b=pos)
+                query_pos_record = super(
+                    PairwiseReader, self)._convert_example_to_record(
+                        query_pos_example, max_seq_length, tokenizer, phase)
+
+                query_neg_example = InputExample(
+                    guid=guid, label=None, text_a=query, text_b=neg)
+                query_neg_record = super(
+                    PairwiseReader, self)._convert_example_to_record(
+                        query_neg_example, max_seq_length, tokenizer, phase)
+
+                record = self.Pairwise_Record(
+                    query_pos_record=query_pos_record,
+                    query_neg_record=query_neg_record,
+                )
+            elif self.nets_num == 3:
+                query_example = InputExample(
+                    guid=guid, label=None, text_a=query, text_b=None)
+                pos_example = InputExample(
+                    guid=guid, label=None, text_a=pos, text_b=None)
+                neg_example = InputExample(
+                    guid=guid, label=None, text_a=neg, text_b=None)
+
+                query_record = super(
+                    PairwiseReader, self)._convert_example_to_record(
+                        query_example, max_seq_length, tokenizer, phase)
+
+                pos_record = super(
+                    PairwiseReader, self)._convert_example_to_record(
+                        pos_example, max_seq_length, tokenizer, phase)
+
+                neg_record = super(
+                    PairwiseReader, self)._convert_example_to_record(
+                        neg_example, max_seq_length, tokenizer, phase)
+
+                record = self.Pairwise_Record(
+                    query_record=query_record,
+                    pos_record=pos_record,
+                    neg_record=neg_record)
+            else:
+                raise ValueError(
+                    "nets_num({}) should be in the range of [1, 3]".format(
+                        self.nets_num))
+
+        return record
+
+    def _pad_batch_records(self, batch_records, phase=None):
+        if phase != "train":
+            return_list = super(PairwiseReader, self)._pad_batch_records(
+                batch_records=batch_records, phase=phase)
+        else:
+            if self.nets_num == 2:
+                query_pos_batch_record = [
+                    record.query_pos_record for record in batch_records
+                ]
+                query_neg_batch_record = [
+                    record.query_neg_record for record in batch_records
+                ]
+                query_pos_return_list = super(
+                    PairwiseReader, self)._pad_batch_records(
+                        batch_records=query_pos_batch_record, phase=phase)
+                query_neg_return_list = super(
+                    PairwiseReader, self)._pad_batch_records(
+                        batch_records=query_neg_batch_record, phase=phase)
+                return_list = query_pos_return_list + query_neg_return_list
+            elif self.nets_num == 3:
+                query_batch_record = [
+                    record.query_record for record in batch_records
+                ]
+                pos_batch_record = [
+                    record.pos_record for record in batch_records
+                ]
+                neg_batch_record = [
+                    record.neg_record for record in batch_records
+                ]
+                query_batch_record = super(PairwiseReader,
+                                           self)._pad_batch_records(
+                                               batch_records=query_batch_record,
+                                               phase=phase)
+                pos_batch_record = super(PairwiseReader,
+                                         self)._pad_batch_records(
+                                             batch_records=pos_batch_record,
+                                             phase=phase)
+                neg_batch_record = super(PairwiseReader,
+                                         self)._pad_batch_records(
+                                             batch_records=neg_batch_record,
+                                             phase=phase)
+                return_list = query_batch_record + pos_batch_record + neg_batch_record
+            else:
+                raise ValueError(
+                    "nets_num({}) should be in the range of [1, 3]".format(
+                        self.nets_num))
+
+        return return_list
+
+
 if __name__ == '__main__':
     pass

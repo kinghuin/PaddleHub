@@ -72,7 +72,7 @@ class NLPCC_DBQA_pairwise(BaseNLPDataset):
             dev_file="dev.tsv",
             test_file="test.tsv",
             label_file=None,
-            label_list=None,
+            label_list=["0", "1"],
         )
 
     def _read_file(self, input_file, phase=None):

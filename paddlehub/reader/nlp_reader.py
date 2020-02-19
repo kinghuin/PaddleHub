@@ -156,7 +156,7 @@ class BaseNLPReader(BaseReader):
             if example.label and example.label not in self.label_map:
                 raise KeyError(
                     "example.label = {%s} not in label" % example.label)
-            label_id = self.label_map[example.label]
+                label_id = self.label_map[example.label]
         else:
             label_id = example.label
 

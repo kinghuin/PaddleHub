@@ -1348,8 +1348,6 @@ class PairwiseReader(ClassifyReader):
                 max_len = max(
                     max_len,
                     sum([len(sub_record.token_ids) for sub_record in record]))
-            else:
-                max_len = max(max_len, len(record.token_ids))
             if self.in_tokens:
                 to_append = (len(batch_records) + 1) * max_len <= batch_size
             else:
@@ -1358,7 +1356,8 @@ class PairwiseReader(ClassifyReader):
                 batch_records.append(record)
             else:
                 yield self._pad_batch_records(batch_records, phase)
-                batch_records, max_len = [record], len(record.token_ids)
+                batch_records, max_len = [record], sum(
+                    [len(sub_record.token_ids) for sub_record in record])
 
         if batch_records:
             yield self._pad_batch_records(batch_records, phase)

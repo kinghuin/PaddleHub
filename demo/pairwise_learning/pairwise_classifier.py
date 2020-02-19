@@ -37,6 +37,7 @@ if __name__ == '__main__':
 
     # Load Paddlehub ERNIE Tiny pretrained model
     module = hub.Module(name="ernie_tiny")
+    module._initialize()
 
     # Download dataset and use accuracy as metrics
     # Choose dataset: GLUE/XNLI/ChinesesGLUE/NLPCC-DBQA/LCQMC

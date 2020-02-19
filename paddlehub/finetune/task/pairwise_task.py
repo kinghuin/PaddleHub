@@ -163,7 +163,13 @@ class PairwiseTask(BaseTask):
                     'float32',
                     # 'int64',
                 ] * copies,
-                lod_levels=[0, 0, 0, 0, 0] * copies,
+                lod_levels=[
+                    0,
+                    0,
+                    0,
+                    0,
+                    # 0
+                ] * copies,
                 name=pyreader_name,
                 use_double_buffer=True)
             self.env.py_reader = pyreader

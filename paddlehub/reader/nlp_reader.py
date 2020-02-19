@@ -1471,6 +1471,7 @@ class PairwiseReader(ClassifyReader):
                                             batch_records=pos_batch_record,
                                             phase=phase)
                 return_list = query_return_list + pos_return_list[:-1]
+                print(phase)
                 print(len(return_list))
             # if phase == "test":
             #     if self.nets_num == 2:

@@ -1470,7 +1470,8 @@ class PairwiseReader(ClassifyReader):
                                         self)._pad_batch_records(
                                             batch_records=pos_batch_record,
                                             phase=phase)
-                return_list = query_return_list + pos_return_list[:-1]
+                # the last one is label
+                return_list = query_return_list[:-1] + pos_return_list
                 print(phase)
                 print(len(return_list))
                 for j in return_list:

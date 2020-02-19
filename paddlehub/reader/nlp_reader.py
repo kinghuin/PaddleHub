@@ -1313,25 +1313,27 @@ class PairwiseReader(ClassifyReader):
 
         def wrapper():
             if sampling:
-                examples = []
+                prepare_examples = []
                 for qid, sub_examples in qid_examples.items():
                     # at least one example
                     least_id = np.random.randint(0, len(sub_examples))
-                    examples.append(sub_examples[least_id])
+                    prepare_examples.append(sub_examples[least_id])
                     sub_examples.pop(least_id)
                     # drop some examples
                     reserve_probs = np.random.rand(len(sub_examples))
                     for i, reserve_prob in enumerate(reserve_probs):
                         if reserve_prob > self.sampling_rate:
-                            examples.append(sub_examples[i])
+                            prepare_examples.append(sub_examples[i])
                         else:
                             continue
+            else:
+                prepare_examples = examples
 
             if shuffle:
-                np.random.shuffle(examples)
+                np.random.shuffle(prepare_examples)
 
             for batch_data in self._prepare_batch_data(
-                    examples, batch_size, phase=phase):
+                    prepare_examples, batch_size, phase=phase):
                 yield [batch_data]
 
         return wrapper

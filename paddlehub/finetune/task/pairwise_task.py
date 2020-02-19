@@ -149,15 +149,19 @@ class PairwiseTask(BaseTask):
         def add_pyreader(copies, pyreader_name):
             pyreader = fluid.layers.py_reader(
                 capacity=50,
-                shapes=[[-1, self.max_seq_len, 1], [-1, self.max_seq_len, 1],
-                        [-1, self.max_seq_len, 1], [-1, self.max_seq_len, 1],
-                        [-1, self.max_seq_len, 1]] * copies,
+                shapes=[
+                    [-1, self.max_seq_len, 1],
+                    [-1, self.max_seq_len, 1],
+                    [-1, self.max_seq_len, 1],
+                    [-1, self.max_seq_len, 1],
+                    # [-1, self.max_seq_len, 1]
+                ] * copies,
                 dtypes=[
                     'int64',
                     'int64',
                     'int64',
                     'float32',
-                    'int64',
+                    # 'int64',
                 ] * copies,
                 lod_levels=[0, 0, 0, 0, 0] * copies,
                 name=pyreader_name,
@@ -173,12 +177,12 @@ class PairwiseTask(BaseTask):
                     "query_pos_position_ids": None,
                     "query_pos_segment_ids": None,
                     "query_pos_input_mask": None,
-                    "query_pos_task_ids": None,
+                    # "query_pos_task_ids": None,
                     "query_neg_input_ids": None,
                     "qury_neg_position_ids": None,
                     "qury_neg_segment_ids": None,
                     "qury_neg_input_mask": None,
-                    "qury_neg_task_ids": None,
+                    # "qury_neg_task_ids": None,
                 }
                 if self.config.use_pyreader:
                     all_intputs = add_pyreader(2, "train_reader")
@@ -190,12 +194,12 @@ class PairwiseTask(BaseTask):
                         "query_pos_position_ids": add_position_ids("query_pos"),
                         "query_pos_segment_ids": add_segment_ids("query_pos"),
                         "query_pos_input_mask": add_input_mask("query_pos"),
-                        "query_pos_task_ids": add_task_ids("query_pos"),
+                        # "query_pos_task_ids": add_task_ids("query_pos"),
                         "query_neg_input_ids": add_input_ids("qury_neg"),
                         "qury_neg_position_ids": add_position_ids("qury_neg"),
                         "qury_neg_segment_ids": add_segment_ids("qury_neg"),
                         "qury_neg_input_mask": add_input_mask("qury_neg"),
-                        "qury_neg_task_ids": add_task_ids("qury_neg"),
+                        # "qury_neg_task_ids": add_task_ids("qury_neg"),
                     }
 
             elif self.nets_num == 3:
@@ -204,17 +208,17 @@ class PairwiseTask(BaseTask):
                     "query_position_ids": None,
                     "query_segment_ids": None,
                     "query_input_mask": None,
-                    "query_task_ids": None,
+                    # "query_task_ids": None,
                     "pos_input_ids": None,
                     "pos_position_ids": None,
                     "pos_segment_ids": None,
                     "pos_input_mask": None,
-                    "pos_task_ids": None,
+                    # "pos_task_ids": None,
                     "neg_input_ids": None,
                     "neg_position_ids": None,
                     "neg_segment_ids": None,
                     "neg_input_mask": None,
-                    "neg_task_ids": None,
+                    # "neg_task_ids": None,
                 }
                 if self.config.use_pyreader:
                     all_intputs = add_pyreader(3, "train_reader")
@@ -226,17 +230,17 @@ class PairwiseTask(BaseTask):
                         "query_position_ids": add_position_ids("query"),
                         "query_segment_ids": add_segment_ids("query"),
                         "query_input_mask": add_input_mask("query"),
-                        "query_task_ids": add_task_ids("query"),
+                        # "query_task_ids": add_task_ids("query"),
                         "pos_input_ids": add_input_ids("pos"),
                         "pos_position_ids": add_position_ids("pos"),
                         "pos_segment_ids": add_segment_ids("pos"),
                         "pos_input_mask": add_input_mask("pos"),
-                        "pos_task_ids": add_task_ids("pos"),
+                        # "pos_task_ids": add_task_ids("pos"),
                         "neg_input_ids": add_input_ids("neg"),
                         "neg_position_ids": add_position_ids("neg"),
                         "neg_segment_ids": add_segment_ids("neg"),
                         "neg_input_mask": add_input_mask("neg"),
-                        "neg_task_ids": add_task_ids("neg"),
+                        # "neg_task_ids": add_task_ids("neg"),
                     }
 
         else:
@@ -246,7 +250,7 @@ class PairwiseTask(BaseTask):
                     "query_pos_position_ids": None,
                     "query_pos_segment_ids": None,
                     "query_pos_input_mask": None,
-                    "query_pos_task_ids": None
+                    # "query_pos_task_ids": None
                 }
                 if self.config.use_pyreader:
                     all_intputs = add_pyreader(1, "train_reader")
@@ -258,7 +262,7 @@ class PairwiseTask(BaseTask):
                         "query_pos_position_ids": add_position_ids("query_pos"),
                         "query_pos_segment_ids": add_segment_ids("query_pos"),
                         "query_pos_input_mask": add_input_mask("query_pos"),
-                        "query_pos_task_ids": add_task_ids("query_pos"),
+                        # "query_pos_task_ids": add_task_ids("query_pos"),
                     }
             elif self.nets_num == 3:
                 inputs = {
@@ -266,12 +270,12 @@ class PairwiseTask(BaseTask):
                     "query_position_ids": None,
                     "query_segment_ids": None,
                     "query_input_mask": None,
-                    "query_task_ids": None,
+                    # "query_task_ids": None,
                     "pos_input_ids": None,
                     "pos_position_ids": None,
                     "pos_segment_ids": None,
                     "pos_input_mask": None,
-                    "pos_task_ids": None,
+                    # "pos_task_ids": None,
                 }
                 if self.config.use_pyreader:
                     all_intputs = add_pyreader(2, "train_reader")
@@ -283,12 +287,12 @@ class PairwiseTask(BaseTask):
                         "query_position_ids": add_position_ids("query"),
                         "query_segment_ids": add_segment_ids("query"),
                         "query_input_mask": add_input_mask("query"),
-                        "query_task_ids": add_task_ids("query"),
+                        # "query_task_ids": add_task_ids("query"),
                         "pos_input_ids": add_input_ids("pos"),
                         "pos_position_ids": add_position_ids("pos"),
                         "pos_segment_ids": add_segment_ids("pos"),
                         "pos_input_mask": add_input_mask("pos"),
-                        "pos_task_ids": add_task_ids("pos"),
+                        # "pos_task_ids": add_task_ids("pos"),
                     }
 
         self.env.inputs = inputs
@@ -298,34 +302,48 @@ class PairwiseTask(BaseTask):
         inputs = self._add_input()
         if self.nets_num == 2:
             query_pos_pooled_output, _ = self.module.net(
-                inputs["query_pos_input_ids"], inputs["query_pos_position_ids"],
-                inputs["query_pos_segment_ids"], inputs["query_pos_input_mask"],
-                inputs["query_pos_task_ids"])
+                inputs["query_pos_input_ids"],
+                inputs["query_pos_position_ids"],
+                inputs["query_pos_segment_ids"],
+                inputs["query_pos_input_mask"],
+                # inputs["query_pos_task_ids"]
+            )
             self.query_pos_sim = query_pos_pooled_output
             if self.is_train_phase:
                 query_neg_pooled_output, _ = self.module.net(
                     inputs["query_neg_input_ids"],
                     inputs["qury_neg_position_ids"],
                     inputs["qury_neg_segment_ids"],
-                    inputs["qury_neg_input_mask"], inputs["qury_neg_task_ids"])
+                    inputs["qury_neg_input_mask"],
+                    # inputs["qury_neg_task_ids"]
+                )
                 self.query_neg_sim = query_neg_pooled_output
 
         elif self.nets_num == 3:
             query_pooled_output, _ = self.module.net(
-                inputs["query_input_ids"], inputs["query_position_ids"],
-                inputs["query_segment_ids"], inputs["query_input_mask"],
-                inputs["query_task_ids"])
+                inputs["query_input_ids"],
+                inputs["query_position_ids"],
+                inputs["query_segment_ids"],
+                inputs["query_input_mask"],
+                # inputs["query_task_ids"]
+            )
             pos_pooled_output, _ = self.module.net(
-                inputs["pos_input_ids"], inputs["pos_position_ids"],
-                inputs["pos_segment_ids"], inputs["pos_input_mask"],
-                inputs["pos_task_ids"])
+                inputs["pos_input_ids"],
+                inputs["pos_position_ids"],
+                inputs["pos_segment_ids"],
+                inputs["pos_input_mask"],
+                # inputs["pos_task_ids"]
+            )
             self.query_pos_sim = fluid.layers.cos_sim(query_pooled_output,
                                                       pos_pooled_output)
             if self.is_train_phase:
                 neg_pooled_output, _ = self.module.net(
-                    inputs["neg_input_ids"], inputs["neg_position_ids"],
-                    inputs["neg_segment_ids"], inputs["neg_input_mask"],
-                    inputs["neg_task_ids"])
+                    inputs["neg_input_ids"],
+                    inputs["neg_position_ids"],
+                    inputs["neg_segment_ids"],
+                    inputs["neg_input_mask"],
+                    # inputs["neg_task_ids"]
+                )
                 self.query_neg_sim = fluid.layers.cos_sim(
                     query_pooled_output, neg_pooled_output)
         if self.is_train_phase:

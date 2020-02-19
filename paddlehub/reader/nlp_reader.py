@@ -152,12 +152,13 @@ class BaseNLPReader(BaseReader):
         token_ids = tokenizer.convert_tokens_to_ids(tokens)
         position_ids = list(range(len(token_ids)))
 
-        label_id = example.label
         if self.label_map:
             if example.label not in self.label_map:
                 raise KeyError(
                     "example.label = {%s} not in label" % example.label)
             label_id = self.label_map[example.label]
+        else:
+            label_id = example.label
 
         if phase != "predict":
             record = self.Record_With_Label_Id(
@@ -1376,13 +1377,13 @@ class PairwiseReader(BaseNLPReader):
 
             if self.nets_num == 2:
                 query_pos_example = InputExample(
-                    guid=guid, label=None, text_a=query, text_b=pos)
+                    guid=guid, label=0, text_a=query, text_b=pos)
                 query_pos_record = super(
                     PairwiseReader, self)._convert_example_to_record(
                         query_pos_example, max_seq_length, tokenizer, phase)
 
                 query_neg_example = InputExample(
-                    guid=guid, label=None, text_a=query, text_b=neg)
+                    guid=guid, label=0, text_a=query, text_b=neg)
                 query_neg_record = super(
                     PairwiseReader, self)._convert_example_to_record(
                         query_neg_example, max_seq_length, tokenizer, phase)
@@ -1393,11 +1394,11 @@ class PairwiseReader(BaseNLPReader):
                 )
             elif self.nets_num == 3:
                 query_example = InputExample(
-                    guid=guid, label=None, text_a=query, text_b=None)
+                    guid=guid, label=0, text_a=query, text_b=None)
                 pos_example = InputExample(
-                    guid=guid, label=None, text_a=pos, text_b=None)
+                    guid=guid, label=0, text_a=pos, text_b=None)
                 neg_example = InputExample(
-                    guid=guid, label=None, text_a=neg, text_b=None)
+                    guid=guid, label=0, text_a=neg, text_b=None)
 
                 query_record = super(
                     PairwiseReader, self)._convert_example_to_record(

@@ -162,7 +162,7 @@ class PairwiseTask(BaseTask):
                 lod_levels=[0, 0, 0, 0, 0] * copies,
                 name=pyreader_name,
                 use_double_buffer=True)
-
+            self.env.py_reader = pyreader
             # input_ids, segment_ids, position_ids, input_mask, task_ids,
             return fluid.layers.read_file(pyreader)
 

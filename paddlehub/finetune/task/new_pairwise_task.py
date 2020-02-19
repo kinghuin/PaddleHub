@@ -1,4 +1,4 @@
-# coding:utf-8
+#coding:utf-8
 #  Copyright (c) 2019  PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"
@@ -30,16 +30,15 @@ from .base_task import BaseTask, RunConfig
 
 
 class PairwiseTask(BaseTask):
-    def __init__(
-            self,
-            module,
-            data_reader,
-            max_seq_len,
-            margin,
-            nets_num,
-            config=None,
-            metrics_choices="default",
-    ):
+    def __init__(self,
+                 module,
+                 num_classes,
+                 data_reader,
+                 config=None,
+                 metrics_choices="default",
+                 margin=0.1,
+                 nets_num=3,
+                 max_seq_len=512):
         super(PairwiseTask, self).__init__(
             feed_list=None,
             data_reader=data_reader,
@@ -48,6 +47,7 @@ class PairwiseTask(BaseTask):
             config=config,
             metrics_choices=metrics_choices)
         self.module = module
+        self.num_classes = num_classes
         self.margin = margin
         self.nets_num = nets_num
         self.max_seq_len = max_seq_len
@@ -351,7 +351,7 @@ class PairwiseTask(BaseTask):
 
     def _add_metrics(self):
         if self.is_train_phase:
-            # todo
+            #todo
             return []
         elif self.is_test_phase:
             acc = fluid.layers.accuracy(
@@ -421,7 +421,7 @@ class PairwiseTask(BaseTask):
         return scores, avg_loss, run_speed
 
     def _postprocessing(self, run_states):
-        # todo
+        #todo
         try:
             id2label = {
                 val: key

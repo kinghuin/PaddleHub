@@ -59,10 +59,11 @@ if __name__ == '__main__':
     # Construct transfer learning network
     # Use "pooled_output" for classification tasks on an entire sentence.
     # Use "sequence_output" for token-level output.
-    pooled_output = [
-        outputs["query_pooled_output"], outputs["pos_pooled_output"],
-        outputs["neg_pooled_output"]
-    ]
+    pooled_output = {
+        "query_pooled_output": outputs["query_pooled_output"],
+        "pos_pooled_output": outputs["pos_pooled_output"],
+        "neg_pooled_output": outputs["neg_pooled_output"]
+    }
 
     # Setup feed list for data feeder
     # Must feed all the tensor of module need
@@ -98,13 +99,12 @@ if __name__ == '__main__':
 
     # Define a classfication finetune task by PaddleHub's API
     cls_task = hub.PairwiseTask(
+        module=module,
         data_reader=reader,
-        main_program=module_program,
-        feature=pooled_output,
-        feed_list=feed_list,
-        num_classes=dataset.num_labels,
-        config=config,
+        max_seq_len=args.max_seq_len,
         margin=0.1,
+        nets_num=3,
+        config=config,
     )
 
     # Finetune and evaluate by PaddleHub's API

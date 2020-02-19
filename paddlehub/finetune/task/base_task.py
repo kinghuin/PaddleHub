@@ -193,7 +193,7 @@ class TaskHooks():
         return self._registered_hooks[hook_type]
 
     def __repr__(self):
-        return self.info(only_customized=False)
+        return self.info(show_default=False)
 
 
 class BaseTask(object):
@@ -223,7 +223,6 @@ class BaseTask(object):
         if main_program is None:
             self._base_main_program = clone_program(
                 fluid.default_main_program(), for_test=False)
-
         else:
             self._base_main_program = clone_program(
                 main_program, for_test=False)

@@ -1245,6 +1245,7 @@ class PairwiseReader(BaseNLPReader):
             raise ValueError(
                 "nets_num({}) should be in the range of [1, 3]".format(
                     nets_num))
+        self.sampling_rate = sampling_rate
 
     def data_generator(self,
                        batch_size=1,

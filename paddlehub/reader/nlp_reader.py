@@ -153,7 +153,7 @@ class BaseNLPReader(BaseReader):
         position_ids = list(range(len(token_ids)))
 
         if self.label_map:
-            if example.label not in self.label_map:
+            if example.label and example.label not in self.label_map:
                 raise KeyError(
                     "example.label = {%s} not in label" % example.label)
             label_id = self.label_map[example.label]

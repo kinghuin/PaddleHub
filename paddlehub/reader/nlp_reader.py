@@ -152,13 +152,12 @@ class BaseNLPReader(BaseReader):
         token_ids = tokenizer.convert_tokens_to_ids(tokens)
         position_ids = list(range(len(token_ids)))
 
+        label_id = example.label
         if self.label_map:
-            if example.label and example.label not in self.label_map:
+            if example.label not in self.label_map:
                 raise KeyError(
                     "example.label = {%s} not in label" % example.label)
-                label_id = self.label_map[example.label]
-        else:
-            label_id = example.label
+            label_id = self.label_map[example.label]
 
         if phase != "predict":
             record = self.Record_With_Label_Id(

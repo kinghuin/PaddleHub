@@ -1238,12 +1238,15 @@ class PairwiseReader(ClassifyReader):
             in_tokens=in_tokens)
         self.nets_num = nets_num
         if self.nets_num == 2:
-            self.Pairwise_Record = namedtuple(
+            self.DoulePairwise_Record_train = namedtuple(
                 'Record', ['query_pos_record', 'query_neg_record'])
-
+            self.DoulePairwise_Record_Dev = namedtuple('Record',
+                                                       ['query_pos_record'])
         elif self.nets_num == 3:
-            self.Pairwise_Record = namedtuple(
+            self.TriblePairwise_Record_Train = namedtuple(
                 'Record', ['query_record', 'pos_record', 'neg_record'])
+            self.TriblePairwise_Record_Dev = namedtuple(
+                'Record', ['query_record', 'pos_record'])
         else:
             raise ValueError(
                 "nets_num({}) should be in the range of [1, 3]".format(
@@ -1371,8 +1374,28 @@ class PairwiseReader(ClassifyReader):
                                    phase=None):
         """Converts a single `Example` into a single `Record`."""
         if phase != "train":
-            return super(PairwiseReader, self)._convert_example_to_record(
-                example, max_seq_length, tokenizer, phase)
+            if self.nets_num == 2:
+                return super(PairwiseReader, self)._convert_example_to_record(
+                    example, max_seq_length, tokenizer, phase)
+            elif self.nets_num == 3:
+                query_example = InputExample(
+                    guid=example.guid,
+                    label=example.label,
+                    text_a=example.text_a,
+                    text_b=None)
+                pos_example = InputExample(
+                    guid=example.guid,
+                    label=example.label,
+                    text_a=None,
+                    text_b=example.text_b)
+                query_record = super(
+                    PairwiseReader, self)._convert_example_to_record(
+                        query_example, max_seq_length, tokenizer, phase)
+                pos_record = super(
+                    PairwiseReader, self)._convert_example_to_record(
+                        pos_example, max_seq_length, tokenizer, phase)
+                record = self.TriblePairwise_Record_Dev(
+                    query_record=query_record, pos_record=pos_record)
         else:
             query = example.query
             pos = example.pos
@@ -1392,7 +1415,7 @@ class PairwiseReader(ClassifyReader):
                     PairwiseReader, self)._convert_example_to_record(
                         query_neg_example, max_seq_length, tokenizer, phase)
 
-                record = self.Pairwise_Record(
+                record = self.DoulePairwise_Record_train(
                     query_pos_record=query_pos_record,
                     query_neg_record=query_neg_record,
                 )
@@ -1416,7 +1439,7 @@ class PairwiseReader(ClassifyReader):
                     PairwiseReader, self)._convert_example_to_record(
                         neg_example, max_seq_length, tokenizer, phase)
 
-                record = self.Pairwise_Record(
+                record = self.TriblePairwise_Record_Train(
                     query_record=query_record,
                     pos_record=pos_record,
                     neg_record=neg_record)
@@ -1429,8 +1452,31 @@ class PairwiseReader(ClassifyReader):
 
     def _pad_batch_records(self, batch_records, phase=None):
         if phase != "train":
-            return_list = super(PairwiseReader, self)._pad_batch_records(
-                batch_records=batch_records, phase=phase)
+            if self.nets_num == 2:
+                return_list = super(PairwiseReader, self)._pad_batch_records(
+                    batch_records=batch_records, phase=phase)
+            elif self.nets_num == 3:
+                query_batch_record = [
+                    record.query_record for record in batch_records
+                ]
+                pos_batch_record = [
+                    record.pos_record for record in batch_records
+                ]
+                query_return_list = super(PairwiseReader,
+                                          self)._pad_batch_records(
+                                              batch_records=query_batch_record,
+                                              phase=phase)
+                pos_return_list = super(PairwiseReader,
+                                        self)._pad_batch_records(
+                                            batch_records=pos_batch_record,
+                                            phase=phase)
+                return_list = query_return_list + pos_return_list[:-1]
+            # if phase == "test":
+            #     if self.nets_num == 2:
+            #         batch_labels = [record.label_id for record in batch_records]
+            #         batch_labels = np.array(batch_labels).astype("int64").reshape(
+            #             [-1, 1])
+
         else:
             if self.nets_num == 2:
                 query_pos_batch_record = [

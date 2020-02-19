@@ -218,7 +218,7 @@ class PairwiseTask(BaseTask):
                 }
                 if self.config.use_pyreader:
                     all_intputs = add_pyreader(3, "train_reader")
-                    for i, key in inputs.keys():
+                    for i, key in enumerate(inputs.keys()):
                         inputs[key] = all_intputs[i]
                 else:
                     inputs = {

@@ -1386,8 +1386,8 @@ class PairwiseReader(ClassifyReader):
                 pos_example = InputExample(
                     guid=example.guid,
                     label=example.label,
-                    text_a=None,
-                    text_b=example.text_b)
+                    text_a=example.text_b,
+                    text_b=None)
                 query_record = super(
                     PairwiseReader, self)._convert_example_to_record(
                         query_example, max_seq_length, tokenizer, phase)

@@ -1472,11 +1472,11 @@ class PairwiseReader(ClassifyReader):
                                             phase=phase)
                 # the last one is label
                 return_list = query_return_list[:-1] + pos_return_list
-                print(phase)
-                print(len(return_list))
-                for j in return_list:
-                    print(j)
-                    print("*" * 20)
+                # print(phase)
+                # print(len(return_list))
+                # for j in return_list:
+                #     print(j)
+                #     print("*" * 20)
             # if phase == "test":
             #     if self.nets_num == 2:
             #         batch_labels = [record.label_id for record in batch_records]

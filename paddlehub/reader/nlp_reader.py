@@ -1211,7 +1211,7 @@ class LACClassifyReader(BaseReader):
         return paddle.batch(_data_reader, batch_size=batch_size)
 
 
-class PairwiseReader(BaseNLPReader):
+class PairwiseReader(ClassifyReader):
     def __init__(self,
                  vocab_path,
                  dataset=None,

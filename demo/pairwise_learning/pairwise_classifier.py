@@ -37,8 +37,6 @@ if __name__ == '__main__':
 
     # Load Paddlehub ERNIE Tiny pretrained model
     module = hub.Module(name="ernie_tiny")
-    inputs, outputs, module_program = module.context(
-        trainable=True, max_seq_len=args.max_seq_len, nets_num=3)
 
     # Download dataset and use accuracy as metrics
     # Choose dataset: GLUE/XNLI/ChinesesGLUE/NLPCC-DBQA/LCQMC
@@ -59,28 +57,9 @@ if __name__ == '__main__':
     # Construct transfer learning network
     # Use "pooled_output" for classification tasks on an entire sentence.
     # Use "sequence_output" for token-level output.
-    pooled_output = {
-        "query_pooled_output": outputs["query_pooled_output"],
-        "pos_pooled_output": outputs["pos_pooled_output"],
-        "neg_pooled_output": outputs["neg_pooled_output"]
-    }
 
     # Setup feed list for data feeder
     # Must feed all the tensor of module need
-    feed_list = [
-        inputs["query_input_ids"].name,
-        inputs["query_position_ids"].name,
-        inputs["query_segment_ids"].name,
-        inputs["query_input_mask"].name,
-        inputs["pos_input_ids"].name,
-        inputs["pos_position_ids"].name,
-        inputs["pos_segment_ids"].name,
-        inputs["pos_input_mask"].name,
-        inputs["neg_input_ids"].name,
-        inputs["neg_position_ids"].name,
-        inputs["neg_segment_ids"].name,
-        inputs["neg_input_mask"].name,
-    ]
 
     # Select finetune strategy, setup config and finetune
     strategy = hub.AdamWeightDecayStrategy(

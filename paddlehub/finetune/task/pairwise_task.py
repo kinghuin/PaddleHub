@@ -314,7 +314,20 @@ class PairwiseTask(BaseTask):
                 inputs["query_pos_input_mask"],
                 # inputs["query_pos_task_ids"]
             )
-            self.query_pos_sim = query_pos_pooled_output
+
+            # self.query_pos_sim = query_pos_pooled_output
+            query_pos_prob = fluid.layers.fc(
+                input=query_pos_pooled_output,
+                size=2,
+                param_attr=fluid.ParamAttr(
+                    name="pos_cls_out_w",
+                    initializer=fluid.initializer.TruncatedNormal(scale=0.02)),
+                bias_attr=fluid.ParamAttr(
+                    name="pos_cls_out_b",
+                    initializer=fluid.initializer.Constant(0.)),
+                act="softmax")
+            self.query_pos_sim = fluid.layers.slice(
+                query_pos_prob, axes=[0], starts=[0], ends=[-1])
             if self.is_train_phase:
                 query_neg_pooled_output, _ = self.module.net(
                     inputs["query_neg_input_ids"],
@@ -323,7 +336,19 @@ class PairwiseTask(BaseTask):
                     inputs["qury_neg_input_mask"],
                     # inputs["qury_neg_task_ids"]
                 )
-                self.query_neg_sim = query_neg_pooled_output
+                query_neg_prob = fluid.layers.fc(
+                    input=query_neg_pooled_output,
+                    size=2,
+                    param_attr=fluid.ParamAttr(
+                        name="neg_cls_out_w",
+                        initializer=fluid.initializer.TruncatedNormal(
+                            scale=0.02)),
+                    bias_attr=fluid.ParamAttr(
+                        name="neg_cls_out_b",
+                        initializer=fluid.initializer.Constant(0.)),
+                    act="softmax")
+                self.query_neg_sim = fluid.layers.slice(
+                    query_neg_prob, axes=[0], starts=[0], ends=[-1])
 
         elif self.nets_num == 3:
             query_pooled_output, _ = self.module.net(
@@ -427,8 +452,6 @@ class PairwiseTask(BaseTask):
                 np_infers[np_infers <= 0] = 0
                 all_labels = np.hstack((all_labels, np_labels.reshape([-1])))
                 all_infers = np.hstack((all_infers, np_infers.reshape([-1])))
-                print(all_labels)
-                print(all_infers)
 
         run_time_used = time.time() - run_states[0].run_time_begin
         avg_loss = loss_sum / run_examples

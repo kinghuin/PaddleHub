@@ -283,7 +283,7 @@ class ClassifyReader(BaseNLPReader):
             max_seq_len=self.max_seq_len,
             pad_idx=self.pad_id)
 
-        if phase == "test" or phase == "dev":
+        if phase != "predict":
             batch_labels = [record.label_id for record in batch_records]
             batch_labels = np.array(batch_labels).astype("int64").reshape(
                 [-1, 1])

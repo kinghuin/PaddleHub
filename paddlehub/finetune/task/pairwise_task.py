@@ -418,7 +418,10 @@ class PairwiseTask(BaseTask):
                     run_state.run_results[2]) * run_state.run_examples
                 np_labels = run_state.run_results[0]
                 np_infers = run_state.run_results[1]
-                np_infers = (np_infers + 1) / 2
+                # np_infers = (np_infers + 1) / 2
+                # the following 2 lines are suitable for both 2 nets and 3 nets?
+                np_infers[np_infers > 0] = 1
+                np_infers[np_infers <= 0] = 0
                 all_labels = np.hstack((all_labels, np_labels.reshape([-1])))
                 all_infers = np.hstack((all_infers, np_infers.reshape([-1])))
 

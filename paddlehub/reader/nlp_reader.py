@@ -1461,7 +1461,10 @@ class PairwiseReader(ClassifyReader):
                                             batch_records=pos_batch_record,
                                             phase=phase)
                 # the last one is label
-                return_list = query_return_list[:-1] + pos_return_list
+                if phase == "dev":
+                    return_list = query_return_list[:-1] + pos_return_list
+                else:
+                    return_list = query_return_list + pos_return_list
                 # print(phase)
                 # print(len(return_list))
                 # for j in return_list:

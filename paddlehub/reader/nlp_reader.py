@@ -1486,10 +1486,10 @@ class PairwiseReader(ClassifyReader):
                 ]
                 query_pos_return_list = super(
                     PairwiseReader, self)._pad_batch_records(
-                        batch_records=query_pos_batch_record, phase=phase)
+                        batch_records=query_pos_batch_record, phase="predict")
                 query_neg_return_list = super(
                     PairwiseReader, self)._pad_batch_records(
-                        batch_records=query_neg_batch_record, phase=phase)
+                        batch_records=query_neg_batch_record, phase="predict")
                 return_list = query_pos_return_list + query_neg_return_list
             elif self.nets_num == 3:
                 query_batch_record = [
@@ -1504,15 +1504,15 @@ class PairwiseReader(ClassifyReader):
                 query_batch_record = super(PairwiseReader,
                                            self)._pad_batch_records(
                                                batch_records=query_batch_record,
-                                               phase=phase)
+                                               phase="predict")
                 pos_batch_record = super(PairwiseReader,
                                          self)._pad_batch_records(
                                              batch_records=pos_batch_record,
-                                             phase=phase)
+                                             phase="predict")
                 neg_batch_record = super(PairwiseReader,
                                          self)._pad_batch_records(
                                              batch_records=neg_batch_record,
-                                             phase=phase)
+                                             phase="predict")
                 return_list = query_batch_record + pos_batch_record + neg_batch_record
             else:
                 raise ValueError(

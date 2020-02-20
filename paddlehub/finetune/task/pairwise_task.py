@@ -415,7 +415,7 @@ class PairwiseTask(BaseTask):
                     run_state.run_results[-1]) * run_state.run_examples
             if self.is_test_phase:
                 acc_sum += np.mean(
-                    run_state.run_results[3]) * run_state.run_examples
+                    run_state.run_results[2]) * run_state.run_examples
                 np_labels = run_state.run_results[0]
                 np_infers = run_state.run_results[1]
                 np_infers = (np_infers + 1) / 2

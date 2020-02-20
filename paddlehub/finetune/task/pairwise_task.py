@@ -259,7 +259,7 @@ class PairwiseTask(BaseTask):
                     # "query_pos_task_ids": None
                 }
                 if self.config.use_pyreader:
-                    all_intputs = add_pyreader(1, self.phase)  # + "_reader")
+                    all_intputs = add_pyreader(1, self.phase + "_reader")
                     for i, key in enumerate(inputs.keys()):
                         inputs[key] = all_intputs[i]
                 else:
@@ -284,7 +284,7 @@ class PairwiseTask(BaseTask):
                     # "pos_task_ids": None,
                 }
                 if self.config.use_pyreader:
-                    all_intputs = add_pyreader(2, self.phase)  # + "_reader")
+                    all_intputs = add_pyreader(2, self.phase + "_reader")
                     for i, key in enumerate(inputs.keys()):
                         inputs[key] = all_intputs[i]
                 else:
@@ -461,3 +461,18 @@ class PairwiseTask(BaseTask):
             batch_infer = np.argmax(batch_result, axis=2)[0]
             results += [id2label[sample_infer] for sample_infer in batch_infer]
         return results
+
+    def save_inference_model(self,
+                             dirname,
+                             model_filename=None,
+                             params_filename=None):
+        if self.phase == "dev":
+            feeded_var_names = self.feed_list[:-1]
+        fluid.io.save_inference_model(
+            dirname=dirname,
+            executor=self.exe,
+            feeded_var_names=feeded_var_names,
+            target_vars=self.fetch_var_list,
+            main_program=self.main_program,
+            model_filename=model_filename,
+            params_filename=params_filename)

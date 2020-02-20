@@ -77,6 +77,7 @@ class RunEnv(object):
         self.metrics = None
         self.is_inititalized = False
         self.UNG = copy.deepcopy(fluid.unique_name.generator)
+        self.inputs = None
 
     def __setattr__(self, key, value):
         self.__dict__[key] = value

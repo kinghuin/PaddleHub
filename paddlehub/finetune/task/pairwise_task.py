@@ -259,7 +259,7 @@ class PairwiseTask(BaseTask):
                     # "query_pos_task_ids": None
                 }
                 if self.config.use_pyreader:
-                    all_intputs = add_pyreader(1, "train_reader")
+                    all_intputs = add_pyreader(1, self.phase + "_reader")
                     for i, key in inputs.keys():
                         inputs[key] = all_intputs[i]
                 else:
@@ -284,7 +284,7 @@ class PairwiseTask(BaseTask):
                     # "pos_task_ids": None,
                 }
                 if self.config.use_pyreader:
-                    all_intputs = add_pyreader(2, "train_reader")
+                    all_intputs = add_pyreader(2, self.phase + "_reader")
                     for i, key in inputs.keys():
                         inputs[key] = all_intputs[i]
                 else:

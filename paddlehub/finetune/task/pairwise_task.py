@@ -302,8 +302,8 @@ class PairwiseTask(BaseTask):
                     }
 
         self.env.inputs = inputs
-        print(self.phase)
-        print(self.env.inputs)
+        # print(self.phase)
+        # print(self.env.inputs)
         return inputs
 
     def _build_net(self):

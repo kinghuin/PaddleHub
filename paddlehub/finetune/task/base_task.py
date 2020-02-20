@@ -749,6 +749,8 @@ class BaseTask(object):
                              model_filename=None,
                              params_filename=None):
         with self.phase_guard("predict"):
+            if not self.env.is_inititalized:
+                self._build_env()
             fluid.io.save_inference_model(
                 dirname=dirname,
                 executor=self.exe,

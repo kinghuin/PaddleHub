@@ -380,9 +380,9 @@ class PairwiseTask(BaseTask):
         elif self.is_test_phase:
             acc = fluid.layers.accuracy(
                 input=self.outputs[0], label=self.labels[0])
-            print(self.outputs[0])
-            print(self.labels[0])
-            print(acc)
+            # print(self.outputs[0])
+            # print(self.labels[0])
+            # print(acc)
             return [acc]
 
     @property
@@ -427,6 +427,8 @@ class PairwiseTask(BaseTask):
                 np_infers[np_infers <= 0] = 0
                 all_labels = np.hstack((all_labels, np_labels.reshape([-1])))
                 all_infers = np.hstack((all_infers, np_infers.reshape([-1])))
+                print(all_labels)
+                print(all_infers)
 
         run_time_used = time.time() - run_states[0].run_time_begin
         avg_loss = loss_sum / run_examples

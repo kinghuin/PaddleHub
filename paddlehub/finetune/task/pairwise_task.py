@@ -192,7 +192,7 @@ class PairwiseTask(BaseTask):
                 }
                 if self.config.use_pyreader:
                     all_intputs = add_pyreader(2, "train_reader")
-                    for i, key in inputs.keys():
+                    for i, key in enumerate(inputs).keys():
                         inputs[key] = all_intputs[i]
                 else:
                     inputs = {
@@ -260,7 +260,7 @@ class PairwiseTask(BaseTask):
                 }
                 if self.config.use_pyreader:
                     all_intputs = add_pyreader(1, self.phase + "_reader")
-                    for i, key in inputs.keys():
+                    for i, key in enumerate(inputs).keys():
                         inputs[key] = all_intputs[i]
                 else:
                     inputs = {
@@ -285,7 +285,7 @@ class PairwiseTask(BaseTask):
                 }
                 if self.config.use_pyreader:
                     all_intputs = add_pyreader(2, self.phase + "_reader")
-                    for i, key in inputs.keys():
+                    for i, key in enumerate(inputs).keys():
                         inputs[key] = all_intputs[i]
                 else:
                     inputs = {
@@ -302,8 +302,6 @@ class PairwiseTask(BaseTask):
                     }
 
         self.env.inputs = inputs
-        # print(self.phase)
-        # print(self.env.inputs)
         return inputs
 
     def _build_net(self):

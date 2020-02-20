@@ -1290,23 +1290,10 @@ class PairwiseReader(ClassifyReader):
 
             for item in data:
                 # set label in order to run the program
-                if self.dataset:
-                    label = list(self.label_map.keys())[0]
-                else:
-                    label = 0
-                if len(item) == 1:
-                    item_i = InputExample(
-                        guid=seq_id, text_a=item[0], label=label)
-                elif len(item) == 2:
-                    item_i = InputExample(
-                        guid=seq_id,
-                        text_a=item[0],
-                        text_b=item[1],
-                        label=label)
-                else:
-                    raise ValueError(
-                        "The length of input_text is out of handling, which must be 1 or 2!"
-                    )
+                assert len(item) == 2, "Each predict data should have two texts"
+                item_i = InputExample(
+                    guid=seq_id, text_a=item[0], text_b=item[1], label=None)
+
                 examples.append(item_i)
                 seq_id += 1
         else:

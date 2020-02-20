@@ -466,6 +466,50 @@ class PairwiseTask(BaseTask):
                              dirname,
                              model_filename=None,
                              params_filename=None):
+        # Traceback (most recent call last):
+        #   File "pairwise_classifier.py", line 94, in <module>
+        #     cls_task.finetune_and_eval()
+        #   File "/home/qiujinxuan/PaddleHub/paddlehub/finetune/task/base_task.py", line 764, in finetune_and_eval
+        #     return self.finetune(do_eval=True)
+        #   File "/home/qiujinxuan/PaddleHub/paddlehub/finetune/task/base_task.py", line 776, in finetune
+        #     run_states = self._run(do_eval=do_eval)
+        #   File "/home/qiujinxuan/PaddleHub/paddlehub/finetune/task/base_task.py", line 829, in _run
+        #     return self._run_with_py_reader(do_eval=do_eval)
+        #   File "/home/qiujinxuan/PaddleHub/paddlehub/finetune/task/base_task.py", line 931, in _run_with_py_reader
+        #     self._eval_interval_event()
+        #   File "/home/qiujinxuan/PaddleHub/paddlehub/finetune/task/base_task.py", line 579, in hook_function
+        #     func(*args)
+        #   File "/home/qiujinxuan/PaddleHub/paddlehub/finetune/task/base_task.py", line 687, in _default_eval_interval_event
+        #     self.eval(phase="dev")
+        #   File "/home/qiujinxuan/PaddleHub/paddlehub/finetune/task/base_task.py", line 800, in eval
+        #     run_states = self._run()
+        #   File "/home/qiujinxuan/PaddleHub/paddlehub/finetune/task/base_task.py", line 827, in _run
+        #     with fluid.program_guard(self.main_program, self.startup_program):
+        #   File "/home/qiujinxuan/PaddleHub/paddlehub/finetune/task/base_task.py", line 473, in main_program
+        #     self._build_env()
+        #   File "/home/qiujinxuan/PaddleHub/paddlehub/finetune/task/pairwise_task.py", line 77, in _build_env
+        #     self.env.main_program, for_test=True)
+        #   File "/home/qiujinxuan/PaddleHub/paddlehub/common/paddle_helper.py", line 274, in clone_program
+        #     dest_program.global_block())
+        #   File "/home/qiujinxuan/PaddleHub/paddlehub/common/paddle_helper.py", line 147, in _copy_vars_and_ops_in_blocks
+        #     var_info = copy.deepcopy(get_variable_info(var))
+        #   File "/home/qiujinxuan/PaddleHub/paddlehub/common/paddle_helper.py", line 54, in get_variable_info
+        #     'dtype': convert_dtype_to_string(var.dtype),
+        #   File "/home/qiujinxuan/anaconda3/lib/python3.7/site-packages/paddle/fluid/framework.py", line 1187, in dtype
+        #     return self.desc.dtype()
+        # paddle.fluid.core_avx.EnforceNotMet:
+        #
+        # --------------------------------------------
+        # C++ Call Stacks (More useful to developers):
+        # --------------------------------------------
+        # 0   std::string paddle::platform::GetTraceBackString<std::string const&>(std::string const&, char const*, int)
+        # 1   paddle::framework::VarDesc::tensor_desc() const
+        # 2   paddle::framework::VarDesc::GetDataType() const
+        #
+        # ----------------------
+        # Error Message Summary:
+        # ----------------------
+        # PaddleCheckError: Getting 'tensor_desc' is not supported by the type of var dev_reader_reader. at [/paddle/paddle/fluid/framework/var_desc.cc:209]
         if self.phase == "dev":
             feeded_var_names = self.feed_list[:-1]
         fluid.io.save_inference_model(

@@ -327,7 +327,7 @@ class PairwiseTask(BaseTask):
                     initializer=fluid.initializer.Constant(0.)),
                 act="softmax")
             self.query_pos_sim = fluid.layers.slice(
-                query_pos_prob, axes=[0], starts=[0], ends=[-0])
+                query_pos_prob, axes=[0], starts=[0], ends=[10000])
             if self.is_train_phase:
                 query_neg_pooled_output, _ = self.module.net(
                     inputs["query_neg_input_ids"],
@@ -348,7 +348,7 @@ class PairwiseTask(BaseTask):
                         initializer=fluid.initializer.Constant(0.)),
                     act="softmax")
                 self.query_neg_sim = fluid.layers.slice(
-                    query_neg_prob, axes=[0], starts=[0], ends=[-0])
+                    query_neg_prob, axes=[0], starts=[0], ends=[10000])
 
         elif self.nets_num == 3:
             query_pooled_output, _ = self.module.net(

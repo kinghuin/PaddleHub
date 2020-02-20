@@ -380,6 +380,9 @@ class PairwiseTask(BaseTask):
         elif self.is_test_phase:
             acc = fluid.layers.accuracy(
                 input=self.outputs[0], label=self.labels[0])
+            print(self.outputs[0])
+            print(self.labels[0])
+            print(acc)
             return [acc]
 
     @property

@@ -61,7 +61,7 @@ class PairwiseTask(BaseTask):
             self._base_main_program, for_test=False)
 
         self.env.startup_program = fluid.Program()
-        with fluid.program_guard(self.env.main_program,
+        with fluid.program_guard(self._envs["train"].main_program,
                                  self._base_startup_program):
             with fluid.unique_name.guard(self.env.UNG):
                 self.env.outputs = self._build_net()

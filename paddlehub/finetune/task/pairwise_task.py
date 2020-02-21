@@ -317,7 +317,7 @@ class PairwiseTask(BaseTask):
             fluid.layers.Print(query_pos_pooled_output)
             # self.query_pos_sim = query_pos_pooled_output
 
-            self.query_pos_sim = fluid.layers.fc(
+            query_pos_prob = fluid.layers.fc(
                 input=query_pos_pooled_output,
                 size=2,
                 param_attr=fluid.ParamAttr(
@@ -326,19 +326,20 @@ class PairwiseTask(BaseTask):
                 bias_attr=fluid.ParamAttr(
                     name="pos_cls_out_b",
                     initializer=fluid.initializer.Constant(0.)),
-                # act="softmax",
+                act="softmax",
                 name="pairwise_fc")
 
-            # fluid.layers.Print(self.query_pos_sim)
-            self.query_pos_infer = fluid.layers.cast(
-                fluid.layers.reshape(
-                    x=fluid.layers.argmax(self.query_pos_sim, axis=1),
-                    shape=[-1, 1]),
-                dtype="float32")
-            # fluid.layers.Print(self.query_pos_infer)
+            self.query_pos_sim = fluid.layers.slice(
+                query_pos_prob, axes=[0], starts=[0], ends=[10000])
 
-            # self.query_pos_sim = fluid.layers.slice(
-            #     query_pos_prob, axes=[0], starts=[0], ends=[10000])
+            # fluid.layers.Print(self.query_pos_sim)
+
+            # self.query_pos_infer = fluid.layers.cast(
+            #     fluid.layers.reshape(
+            #         x=fluid.layers.argmax(self.query_pos_sim, axis=1),
+            #         shape=[-1, 1]),
+            #     dtype="float32")
+            # fluid.layers.Print(self.query_pos_infer)
 
             # self.query_pos_infer = fluid.layers.cast(
             #     fluid.layers.greater_than(
@@ -357,7 +358,7 @@ class PairwiseTask(BaseTask):
                 fluid.layers.Print(query_neg_pooled_output)
                 # self.query_neg_sim = query_neg_pooled_output
 
-                self.query_neg_sim = fluid.layers.fc(
+                query_neg_prob = fluid.layers.fc(
                     input=query_neg_pooled_output,
                     size=2,
                     param_attr=fluid.ParamAttr(
@@ -367,8 +368,20 @@ class PairwiseTask(BaseTask):
                     bias_attr=fluid.ParamAttr(
                         name="neg_cls_out_b",
                         initializer=fluid.initializer.Constant(0.)),
-                    # act="softmax",
+                    act="softmax",
                     name="pairwise_fc")
+
+                self.query_neg_sim = fluid.layers.slice(
+                    query_neg_prob, axes=[0], starts=[0], ends=[10000])
+
+                self.query_pos_infer = fluid.layers.cast(
+                    fluid.layers.greater_than(
+                        self.query_pos_sim,
+                        fluid.layers.fill_constant(
+                            shape=fluid.layers.shape(self.query_pos_sim),
+                            value=0.5,
+                            dtype='float32')),
+                    dtype="float32")
 
                 # fluid.layers.Print(inputs["query_pos_input_ids"])
                 # fluid.layers.Print(inputs["query_pos_position_ids"])
@@ -376,8 +389,7 @@ class PairwiseTask(BaseTask):
                 # fluid.layers.Print(inputs["query_pos_input_mask"])
                 # fluid.layers.Print(self.query_pos_sim)
                 # fluid.layers.Print(self.query_pos_infer)
-                # self.query_neg_sim = fluid.layers.slice(
-                #     query_neg_prob, axes=[0], starts=[0], ends=[10000])
+
                 #
                 # self.query_neg_infer = fluid.layers.cast(
                 #     fluid.layers.greater_than(

@@ -326,7 +326,7 @@ class PairwiseTask(BaseTask):
                 bias_attr=fluid.ParamAttr(
                     name="pos_cls_out_b",
                     initializer=fluid.initializer.Constant(0.)),
-                act="softmax",
+                # act="softmax",
                 name="pairwise_fc")
 
             # fluid.layers.Print(self.query_pos_sim)
@@ -367,7 +367,7 @@ class PairwiseTask(BaseTask):
                     bias_attr=fluid.ParamAttr(
                         name="neg_cls_out_b",
                         initializer=fluid.initializer.Constant(0.)),
-                    act="softmax",
+                    # act="softmax",
                     name="pairwise_fc")
 
                 # fluid.layers.Print(inputs["query_pos_input_ids"])

@@ -350,6 +350,9 @@ class PairwiseTask(BaseTask):
                         fluid.layers.zeros_like(self.query_neg_sim)),
                     dtype="float32")
 
+                self.train_label = fluid.layers.cast(
+                    fluid.layers.ones_like(self.query_pos_infer), dtype="int32")
+
                 # query_neg_prob = fluid.layers.fc(
                 #     input=query_neg_pooled_output,
                 #     size=2,
@@ -402,6 +405,9 @@ class PairwiseTask(BaseTask):
                         self.query_neg_sim,
                         fluid.layers.zeros_like(self.query_neg_sim)),
                     dtype="float32")
+
+                self.train_label = fluid.layers.cast(
+                    fluid.layers.ones_like(self.query_pos_infer), dtype="int32")
         # if self.is_train_phase:
         #     return [self.query_pos_sim, self.query_neg_sim]
         # else:
@@ -426,10 +432,9 @@ class PairwiseTask(BaseTask):
 
     def _add_metrics(self):
         if self.is_train_phase:
-            return []
-            # acc = fluid.layers.accuracy(
-            #     input=self.outputs[0],
-            #     label=fluid.layers.ones_like(self.outputs[0]))
+            # return []
+            acc = fluid.layers.accuracy(
+                input=self.outputs[0], label=self.train_label)
         elif self.is_test_phase:
             acc = fluid.layers.accuracy(
                 input=self.outputs[0], label=self.labels[0])
@@ -450,9 +455,10 @@ class PairwiseTask(BaseTask):
             return [self.labels[0].name, self.query_pos_infer.name
                     ] + [metric.name for metric in self.metrics]
         elif self.is_train_phase:
-            return [self.query_pos_sim.name, self.query_neg_sim.name
-                    ] + [metric.name
-                         for metric in self.metrics] + [self.loss.name]
+            return [
+                self.train_label.name,
+                self.query_pos_sim.name  #, self.query_neg_sim.name
+            ] + [metric.name for metric in self.metrics] + [self.loss.name]
         else:
             return [output.name for output in self.outputs]
 
@@ -471,14 +477,14 @@ class PairwiseTask(BaseTask):
                 loss_sum += np.mean(
                     run_state.run_results[-1]) * run_state.run_examples
             if self.is_test_phase:
-                # np_labels = run_state.run_results[0]
+                np_labels = run_state.run_results[0]
                 np_infers = run_state.run_results[1]
                 # np_infers = (np_infers + 1) / 2
                 # the following 2 lines are suitable for both 2 nets and 3 nets?
                 # np_infers[np_infers > 0] = 1
                 # np_infers[np_infers <= 0] = 0
-                # all_labels = np.hstack((all_labels, np_labels.reshape([-1])))
-                # all_infers = np.hstack((all_infers, np_infers.reshape([-1])))
+                all_labels = np.hstack((all_labels, np_labels.reshape([-1])))
+                all_infers = np.hstack((all_infers, np_infers.reshape([-1])))
 
         run_time_used = time.time() - run_states[0].run_time_begin
         avg_loss = loss_sum / run_examples

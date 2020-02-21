@@ -337,20 +337,20 @@ class PairwiseTask(BaseTask):
             # fluid.layers.Print(query_pos_pooled_output)
             # self.query_pos_sim = query_pos_pooled_output
 
-            query_pos_prob = fluid.layers.fc(
+            self.query_pos_sim = fluid.layers.fc(
                 input=query_pos_pooled_output,
-                size=2,
+                size=1,
                 param_attr=fluid.ParamAttr(
                     name="pos_cls_out_w",
                     initializer=fluid.initializer.TruncatedNormal(scale=0.02)),
                 bias_attr=fluid.ParamAttr(
                     name="pos_cls_out_b",
                     initializer=fluid.initializer.Constant(0.)),
-                act="softmax",
+                act="tanh",
                 name="pairwise_fc")
 
-            self.query_pos_sim = fluid.layers.slice(
-                query_pos_prob, axes=[0, 1], starts=[0, 0], ends=[1000, 1])
+            # self.query_pos_sim = fluid.layers.slice(
+            #     query_pos_prob, axes=[0, 1], starts=[0, 0], ends=[1000, 1])
 
             fluid.layers.Print(self.query_pos_sim)
 
@@ -378,9 +378,9 @@ class PairwiseTask(BaseTask):
                 # fluid.layers.Print(query_neg_pooled_output)
                 # self.query_neg_sim = query_neg_pooled_output
 
-                query_neg_prob = fluid.layers.fc(
+                self.query_neg_sim = fluid.layers.fc(
                     input=query_neg_pooled_output,
-                    size=2,
+                    size=1,
                     param_attr=fluid.ParamAttr(
                         name="neg_cls_out_w",
                         initializer=fluid.initializer.TruncatedNormal(
@@ -388,11 +388,11 @@ class PairwiseTask(BaseTask):
                     bias_attr=fluid.ParamAttr(
                         name="neg_cls_out_b",
                         initializer=fluid.initializer.Constant(0.)),
-                    act="softmax",
+                    act="tanh",
                     name="pairwise_fc")
 
-                self.query_neg_sim = fluid.layers.slice(
-                    query_neg_prob, axes=[0, 1], starts=[0, 0], ends=[10000, 1])
+                # self.query_neg_sim = fluid.layers.slice(
+                #     query_neg_prob, axes=[0, 1], starts=[0, 0], ends=[10000, 1])
 
                 self.query_pos_infer = fluid.layers.cast(
                     fluid.layers.greater_than(

@@ -66,12 +66,6 @@ if __name__ == '__main__':
     # Setup feed list for data feeder
     # Must feed all the tensor of module need
 
-    # Select finetune strategy, setup config and finetune
-    strategy = hub.AdamWeightDecayStrategy(
-        warmup_proportion=args.warmup_proportion,
-        weight_decay=args.weight_decay,
-        learning_rate=args.learning_rate)
-
     # Setup runing config for PaddleHub Finetune API
     config = hub.RunConfig(
         use_data_parallel=False,

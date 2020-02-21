@@ -61,7 +61,7 @@ class PairwiseTask(BaseTask):
             self._base_main_program, for_test=False)
 
         self.env.startup_program = fluid.Program()
-        with fluid.program_guard(self._envs["train"].main_program,
+        with fluid.program_guard(self._envs.main_program,
                                  self._base_startup_program):
             with fluid.unique_name.guard(self.env.UNG):
                 self.env.outputs = self._build_net()
@@ -314,7 +314,7 @@ class PairwiseTask(BaseTask):
                 inputs["query_pos_input_mask"],
                 # inputs["query_pos_task_ids"]
             )
-            fluid.layers.Print(query_pos_pooled_output)
+            # fluid.layers.Print(query_pos_pooled_output)
             # self.query_pos_sim = query_pos_pooled_output
 
             query_pos_prob = fluid.layers.fc(
@@ -355,7 +355,7 @@ class PairwiseTask(BaseTask):
                     inputs["qury_neg_input_mask"],
                     # inputs["qury_neg_task_ids"]
                 )
-                fluid.layers.Print(query_neg_pooled_output)
+                # fluid.layers.Print(query_neg_pooled_output)
                 # self.query_neg_sim = query_neg_pooled_output
 
                 query_neg_prob = fluid.layers.fc(
@@ -442,8 +442,8 @@ class PairwiseTask(BaseTask):
 
                 # self.train_label = fluid.layers.cast(
                 #     fluid.layers.ones_like(self.query_pos_infer), dtype="int64")
-        fluid.layers.Print(self.query_pos_sim)
-        fluid.layers.Print(self.query_neg_sim)
+        # fluid.layers.Print(self.query_pos_sim)
+        # fluid.layers.Print(self.query_neg_sim)
         if self.is_train_phase:
             return [self.query_pos_sim, self.query_neg_sim]
         else:

@@ -441,6 +441,8 @@ class PairwiseTask(BaseTask):
     def _add_metrics(self):
         if self.is_train_phase:
             # return []
+            fluid.layers.Print(self.outputs[0])
+            fluid.layers.Print(self.train_label)
             acc = fluid.layers.accuracy(
                 input=self.outputs[0], label=self.train_label)
         elif self.is_test_phase:

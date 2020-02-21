@@ -516,7 +516,7 @@ class PairwiseTask(BaseTask):
         results = []
         for batch_state in run_states:
             batch_result = batch_state.run_results
-            results += batch_result
+            results += batch_result.tolist()
             # for sample_infer in batch_result:
             #     results.append(sample_infer)
         return results

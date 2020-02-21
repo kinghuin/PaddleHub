@@ -315,19 +315,26 @@ class PairwiseTask(BaseTask):
                 # inputs["query_pos_task_ids"]
             )
 
-            # self.query_pos_sim = query_pos_pooled_output
-            query_pos_prob = fluid.layers.fc(
-                input=query_pos_pooled_output,
-                size=2,
-                param_attr=fluid.ParamAttr(
-                    name="pos_cls_out_w",
-                    initializer=fluid.initializer.TruncatedNormal(scale=0.02)),
-                bias_attr=fluid.ParamAttr(
-                    name="pos_cls_out_b",
-                    initializer=fluid.initializer.Constant(0.)),
-                act="softmax")
-            self.query_pos_sim = fluid.layers.slice(
-                query_pos_prob, axes=[0], starts=[0], ends=[10000])
+            self.query_pos_sim = query_pos_pooled_output
+            self.query_pos_infer = fluid.layers.cast(
+                fluid.layers.greater_than(
+                    self.query_pos_sim,
+                    fluid.layers.zeros_like(self.query_pos_sim)),
+                dtype=np.int)
+
+            # query_pos_prob = fluid.layers.fc(
+            #     input=query_pos_pooled_output,
+            #     size=2,
+            #     param_attr=fluid.ParamAttr(
+            #         name="pos_cls_out_w",
+            #         initializer=fluid.initializer.TruncatedNormal(scale=0.02)),
+            #     bias_attr=fluid.ParamAttr(
+            #         name="pos_cls_out_b",
+            #         initializer=fluid.initializer.Constant(0.)),
+            #     act="softmax")
+            # self.query_pos_sim = fluid.layers.slice(
+            #     query_pos_prob, axes=[0], starts=[0], ends=[10000])
+
             if self.is_train_phase:
                 query_neg_pooled_output, _ = self.module.net(
                     inputs["query_neg_input_ids"],
@@ -336,19 +343,26 @@ class PairwiseTask(BaseTask):
                     inputs["qury_neg_input_mask"],
                     # inputs["qury_neg_task_ids"]
                 )
-                query_neg_prob = fluid.layers.fc(
-                    input=query_neg_pooled_output,
-                    size=2,
-                    param_attr=fluid.ParamAttr(
-                        name="neg_cls_out_w",
-                        initializer=fluid.initializer.TruncatedNormal(
-                            scale=0.02)),
-                    bias_attr=fluid.ParamAttr(
-                        name="neg_cls_out_b",
-                        initializer=fluid.initializer.Constant(0.)),
-                    act="softmax")
-                self.query_neg_sim = fluid.layers.slice(
-                    query_neg_prob, axes=[0], starts=[0], ends=[10000])
+                self.query_neg_sim = query_neg_pooled_output
+                self.query_neg_infer = fluid.layers.cast(
+                    fluid.layers.greater_than(
+                        self.query_neg_sim,
+                        fluid.layers.zeros_like(self.query_neg_sim)),
+                    dtype=np.int)
+
+                # query_neg_prob = fluid.layers.fc(
+                #     input=query_neg_pooled_output,
+                #     size=2,
+                #     param_attr=fluid.ParamAttr(
+                #         name="neg_cls_out_w",
+                #         initializer=fluid.initializer.TruncatedNormal(
+                #             scale=0.02)),
+                #     bias_attr=fluid.ParamAttr(
+                #         name="neg_cls_out_b",
+                #         initializer=fluid.initializer.Constant(0.)),
+                #     act="softmax")
+                # self.query_neg_sim = fluid.layers.slice(
+                #     query_neg_prob, axes=[0], starts=[0], ends=[10000])
 
         elif self.nets_num == 3:
             query_pooled_output, _ = self.module.net(
@@ -367,6 +381,12 @@ class PairwiseTask(BaseTask):
             )
             self.query_pos_sim = fluid.layers.cos_sim(query_pooled_output,
                                                       pos_pooled_output)
+            self.query_pos_infer = fluid.layers.cast(
+                fluid.layers.greater_than(
+                    self.query_pos_sim,
+                    fluid.layers.zeros_like(self.query_pos_sim)),
+                dtype=np.int)
+
             if self.is_train_phase:
                 neg_pooled_output, _ = self.module.net(
                     inputs["neg_input_ids"],
@@ -377,10 +397,16 @@ class PairwiseTask(BaseTask):
                 )
                 self.query_neg_sim = fluid.layers.cos_sim(
                     query_pooled_output, neg_pooled_output)
-        if self.is_train_phase:
-            return [self.query_pos_sim, self.query_neg_sim]
-        else:
-            return [self.query_pos_sim]
+                self.query_neg_infer = fluid.layers.cast(
+                    fluid.layers.greater_than(
+                        self.query_neg_sim,
+                        fluid.layers.zeros_like(self.query_neg_sim)),
+                    dtype=np.int)
+        # if self.is_train_phase:
+        #     return [self.query_pos_sim, self.query_neg_sim]
+        # else:
+        #     return [self.query_pos_sim]
+        return self.query_pos_infer
 
     def _add_label(self):
         return [fluid.layers.data(name="label", dtype="int64", shape=[1])]
@@ -400,12 +426,15 @@ class PairwiseTask(BaseTask):
 
     def _add_metrics(self):
         if self.is_train_phase:
-            # todo
-            return []
+            acc = fluid.layers.accuracy(
+                input=self.outputs[0],
+                label=fluid.layers.ones_like(self.outputs[0]))
         elif self.is_test_phase:
             acc = fluid.layers.accuracy(
                 input=self.outputs[0], label=self.labels[0])
-            return [acc]
+        else:
+            raise Exception("_add_metrics: unsupport phase")
+        return [acc]
 
     @property
     def feed_list(self):
@@ -417,7 +446,7 @@ class PairwiseTask(BaseTask):
     @property
     def fetch_list(self):
         if self.is_test_phase:
-            return [self.labels[0].name, self.query_pos_sim.name
+            return [self.labels[0].name, self.query_pos_infer.name
                     ] + [metric.name for metric in self.metrics]
         elif self.is_train_phase:
             return [self.query_pos_sim.name, self.query_neg_sim.name
@@ -435,20 +464,20 @@ class PairwiseTask(BaseTask):
         for run_state in run_states:
             run_examples += run_state.run_examples
             run_step += run_state.run_step
+            acc_sum += np.mean(
+                run_state.run_results[2]) * run_state.run_examples
             if self.is_train_phase:
                 loss_sum += np.mean(
                     run_state.run_results[-1]) * run_state.run_examples
             if self.is_test_phase:
-                acc_sum += np.mean(
-                    run_state.run_results[2]) * run_state.run_examples
-                np_labels = run_state.run_results[0]
+                # np_labels = run_state.run_results[0]
                 np_infers = run_state.run_results[1]
                 # np_infers = (np_infers + 1) / 2
                 # the following 2 lines are suitable for both 2 nets and 3 nets?
-                np_infers[np_infers > 0] = 1
-                np_infers[np_infers <= 0] = 0
-                all_labels = np.hstack((all_labels, np_labels.reshape([-1])))
-                all_infers = np.hstack((all_infers, np_infers.reshape([-1])))
+                # np_infers[np_infers > 0] = 1
+                # np_infers[np_infers <= 0] = 0
+                # all_labels = np.hstack((all_labels, np_labels.reshape([-1])))
+                # all_infers = np.hstack((all_infers, np_infers.reshape([-1])))
 
         run_time_used = time.time() - run_states[0].run_time_begin
         avg_loss = loss_sum / run_examples
@@ -461,12 +490,12 @@ class PairwiseTask(BaseTask):
                 if metric == "acc":
                     avg_acc = acc_sum / run_examples
                     scores["acc"] = avg_acc
-                elif metric == "f1":
-                    f1 = calculate_f1_np(all_infers, all_labels)
-                    scores["f1"] = f1
-                elif metric == "matthews":
-                    matthews = matthews_corrcoef(all_infers, all_labels)
-                    scores["matthews"] = matthews
+                # elif metric == "f1":
+                #     f1 = calculate_f1_np(all_infers, all_labels)
+                #     scores["f1"] = f1
+                # elif metric == "matthews":
+                #     matthews = matthews_corrcoef(all_infers, all_labels)
+                #     scores["matthews"] = matthews
                 else:
                     raise ValueError("Not Support Metric: \"%s\"" % metric)
 
@@ -487,7 +516,6 @@ class PairwiseTask(BaseTask):
         for batch_state in run_states:
             batch_result = batch_state.run_results
             for sample_infer in batch_result:
-                print(sample_infer)
                 if sample_infer > 0.5:
                     results.append(1)
         return results

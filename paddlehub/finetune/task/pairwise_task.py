@@ -332,7 +332,7 @@ class PairwiseTask(BaseTask):
             self.query_pos_sim = fluid.layers.slice(
                 query_pos_prob, starts=[0, 0, 0], ends=[10000, 1000, 1])
 
-            # fluid.layers.Print(self.query_pos_sim)
+            fluid.layers.Print(self.query_pos_sim)
 
             # self.query_pos_infer = fluid.layers.cast(
             #     fluid.layers.reshape(

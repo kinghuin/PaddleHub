@@ -113,35 +113,35 @@ class PairwiseTask(BaseTask):
     def _add_input(self):
         def add_input_ids(prefix):
             return fluid.layers.data(
-                name=prefix + 'input_ids',
+                name=prefix + '_input_ids',
                 shape=[-1, self.max_seq_len, 1],
                 dtype='int64',
                 lod_level=0)
 
         def add_position_ids(prefix):
             return fluid.layers.data(
-                name=prefix + 'position_ids',
+                name=prefix + '_position_ids',
                 shape=[-1, self.max_seq_len, 1],
                 dtype='int64',
                 lod_level=0)
 
         def add_segment_ids(prefix):
             return fluid.layers.data(
-                name=prefix + 'segment_ids',
+                name=prefix + '_segment_ids',
                 shape=[-1, self.max_seq_len, 1],
                 dtype='int64',
                 lod_level=0)
 
         def add_input_mask(prefix):
             return fluid.layers.data(
-                name=prefix + 'input_mask',
+                name=prefix + '_input_mask',
                 shape=[-1, self.max_seq_len, 1],
                 dtype='float32',
                 lod_level=0)
 
         def add_task_ids(prefix):
             return fluid.layers.data(
-                name=prefix + 'task_ids',
+                name=prefix + '_task_ids',
                 shape=[-1, self.max_seq_len, 1],
                 dtype='int64',
                 lod_level=0)
@@ -327,6 +327,7 @@ class PairwiseTask(BaseTask):
                     name="pos_cls_out_b",
                     initializer=fluid.initializer.Constant(0.)),
                 act="softmax")
+
             # fluid.layers.Print(self.query_pos_sim)
             self.query_pos_infer = fluid.layers.cast(
                 fluid.layers.reshape(
@@ -366,12 +367,12 @@ class PairwiseTask(BaseTask):
                         initializer=fluid.initializer.Constant(0.)),
                     act="softmax")
 
-                fluid.layers.Print(inputs["query_pos_input_ids"])
-                fluid.layers.Print(inputs["query_pos_position_ids"])
-                fluid.layers.Print(inputs["query_pos_segment_ids"])
-                fluid.layers.Print(inputs["query_pos_input_mask"])
-                fluid.layers.Print(self.query_pos_sim)
-                fluid.layers.Print(self.query_pos_infer)
+                # fluid.layers.Print(inputs["query_pos_input_ids"])
+                # fluid.layers.Print(inputs["query_pos_position_ids"])
+                # fluid.layers.Print(inputs["query_pos_segment_ids"])
+                # fluid.layers.Print(inputs["query_pos_input_mask"])
+                # fluid.layers.Print(self.query_pos_sim)
+                # fluid.layers.Print(self.query_pos_infer)
                 # self.query_neg_sim = fluid.layers.slice(
                 #     query_neg_prob, axes=[0], starts=[0], ends=[10000])
                 #
@@ -381,8 +382,9 @@ class PairwiseTask(BaseTask):
                 #         fluid.layers.zeros_like(self.query_neg_sim)),
                 #     dtype="float32")
 
-                self.train_label = fluid.layers.cast(
-                    fluid.layers.ones_like(self.query_pos_infer), dtype="int64")
+                # train has no label
+                # self.train_label = fluid.layers.cast(
+                #     fluid.layers.ones_like(self.query_pos_infer), dtype="int64")
 
         elif self.nets_num == 3:
             query_pooled_output, _ = self.module.net(
@@ -423,8 +425,10 @@ class PairwiseTask(BaseTask):
                         fluid.layers.zeros_like(self.query_neg_sim)),
                     dtype="float32")
 
-                self.train_label = fluid.layers.cast(
-                    fluid.layers.ones_like(self.query_pos_infer), dtype="int64")
+                # self.train_label = fluid.layers.cast(
+                #     fluid.layers.ones_like(self.query_pos_infer), dtype="int64")
+        fluid.layers.Print(self.query_pos_sim)
+        fluid.layers.Print(self.query_neg_sim)
         if self.is_train_phase:
             return [self.query_pos_sim, self.query_neg_sim]
         else:
@@ -449,11 +453,11 @@ class PairwiseTask(BaseTask):
 
     def _add_metrics(self):
         if self.is_train_phase:
-            # return []
+            return []
             # fluid.layers.Print(self.query_pos_infer)
             # fluid.layers.Print(self.train_label)
-            acc = fluid.layers.accuracy(
-                input=self.query_pos_infer, label=self.train_label)
+            # acc = fluid.layers.accuracy(
+            #     input=self.query_pos_infer, label=self.train_label)
         elif self.is_test_phase:
             # fluid.layers.Print(self.query_pos_infer)
             # fluid.layers.Print(self.labels[0])
@@ -477,8 +481,9 @@ class PairwiseTask(BaseTask):
                     ] + [metric.name for metric in self.metrics]
         elif self.is_train_phase:
             return [
-                self.train_label.name,
-                self.query_pos_sim.name  #, self.query_neg_sim.name
+                # self.train_label.name,
+                self.query_pos_sim.name,
+                self.query_neg_sim.name
             ] + [metric.name for metric in self.metrics] + [self.loss.name]
         else:
             return [output.name for output in self.outputs]
@@ -492,12 +497,12 @@ class PairwiseTask(BaseTask):
         for run_state in run_states:
             run_examples += run_state.run_examples
             run_step += run_state.run_step
-            acc_sum += np.mean(
-                run_state.run_results[2]) * run_state.run_examples
             if self.is_train_phase:
                 loss_sum += np.mean(
                     run_state.run_results[-1]) * run_state.run_examples
             if self.is_test_phase:
+                acc_sum += np.mean(
+                    run_state.run_results[2]) * run_state.run_examples
                 np_labels = run_state.run_results[0]
                 np_infers = run_state.run_results[1]
                 # np_infers = (np_infers + 1) / 2
@@ -512,19 +517,21 @@ class PairwiseTask(BaseTask):
         run_speed = run_step / run_time_used
 
         # The first key will be used as main metrics to update the best model
+
         scores = OrderedDict()
-        for metric in self.metrics_choices:
-            if metric == "acc":
-                avg_acc = acc_sum / run_examples
-                scores["acc"] = avg_acc
-            # elif metric == "f1":
-            #     f1 = calculate_f1_np(all_infers, all_labels)
-            #     scores["f1"] = f1
-            # elif metric == "matthews":
-            #     matthews = matthews_corrcoef(all_infers, all_labels)
-            #     scores["matthews"] = matthews
-            else:
-                raise ValueError("Not Support Metric: \"%s\"" % metric)
+        if self.is_test_phase:
+            for metric in self.metrics_choices:
+                if metric == "acc":
+                    avg_acc = acc_sum / run_examples
+                    scores["acc"] = avg_acc
+                # elif metric == "f1":
+                #     f1 = calculate_f1_np(all_infers, all_labels)
+                #     scores["f1"] = f1
+                # elif metric == "matthews":
+                #     matthews = matthews_corrcoef(all_infers, all_labels)
+                #     scores["matthews"] = matthews
+                else:
+                    raise ValueError("Not Support Metric: \"%s\"" % metric)
 
         return scores, avg_loss, run_speed
 

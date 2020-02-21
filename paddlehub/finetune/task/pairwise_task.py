@@ -327,11 +327,13 @@ class PairwiseTask(BaseTask):
                     name="pos_cls_out_b",
                     initializer=fluid.initializer.Constant(0.)),
                 act="softmax")
+            fluid.layers.Print(self.query_pos_sim)
             self.query_pos_infer = fluid.layers.cast(
                 fluid.layers.reshape(
                     x=fluid.layers.argmax(self.query_pos_sim, axis=1),
                     shape=[-1, 1]),
                 dtype="float32")
+            fluid.layers.Print(self.query_pos_infer)
 
             # self.query_pos_sim = fluid.layers.slice(
             #     query_pos_prob, axes=[0], starts=[0], ends=[10000])
@@ -441,8 +443,8 @@ class PairwiseTask(BaseTask):
     def _add_metrics(self):
         if self.is_train_phase:
             # return []
-            fluid.layers.Print(self.outputs[0])
-            fluid.layers.Print(self.train_label)
+            # fluid.layers.Print(self.outputs[0])
+            # fluid.layers.Print(self.train_label)
             acc = fluid.layers.accuracy(
                 input=self.outputs[0], label=self.train_label)
         elif self.is_test_phase:

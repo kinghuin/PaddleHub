@@ -423,7 +423,7 @@ class PairwiseTask(BaseTask):
             return [self.labels[0].name, self.query_pos_sim.name
                     ] + [metric.name for metric in self.metrics]
         elif self.is_train_phase:
-            return [self.query_pos_sim.name, self.query_neg_sim
+            return [self.query_pos_sim.name, self.query_neg_sim.name
                     ] + [metric.name
                          for metric in self.metrics] + [self.loss.name]
         else:

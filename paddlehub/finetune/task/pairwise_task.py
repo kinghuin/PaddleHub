@@ -24,9 +24,29 @@ import paddle.fluid as fluid
 
 import paddlehub as hub
 from paddlehub.common.paddle_helper import clone_program
-from paddlehub.finetune.evaluate import calculate_f1_np, matthews_corrcoef
-from paddlehub.common import logger
 from .base_task import BaseTask, RunConfig
+
+
+class RunEnv(object):
+    def __init__(self):
+        self.current_epoch = 0
+        self.current_step = 0
+        self.main_program = None
+        self.start_program = None
+        self.main_program_compiled = None
+        self.py_reader = None
+        self.reader = None
+        self.loss = None
+        self.labels = None
+        self.metrics = None
+        self.is_inititalized = False
+        self.UNG = "Pairwise"
+
+    def __setattr__(self, key, value):
+        self.__dict__[key] = value
+
+    def __getattr__(self, key):
+        return self.__dict__[key]
 
 
 class PairwiseTask(BaseTask):
@@ -61,7 +81,7 @@ class PairwiseTask(BaseTask):
             self._base_main_program, for_test=False)
 
         self.env.startup_program = fluid.Program()
-        with fluid.program_guard(self._envs.main_program,
+        with fluid.program_guard(self.env.main_program,
                                  self._base_startup_program):
             with fluid.unique_name.guard(self.env.UNG):
                 self.env.outputs = self._build_net()

@@ -373,7 +373,7 @@ class PairwiseTask(BaseTask):
                 #     dtype="float32")
 
                 self.train_label = fluid.layers.cast(
-                    fluid.layers.ones_like(self.query_pos_infer), dtype="int32")
+                    fluid.layers.ones_like(self.query_pos_infer), dtype="int64")
 
         elif self.nets_num == 3:
             query_pooled_output, _ = self.module.net(
@@ -415,7 +415,7 @@ class PairwiseTask(BaseTask):
                     dtype="float32")
 
                 self.train_label = fluid.layers.cast(
-                    fluid.layers.ones_like(self.query_pos_infer), dtype="int32")
+                    fluid.layers.ones_like(self.query_pos_infer), dtype="int64")
         # if self.is_train_phase:
         #     return [self.query_pos_sim, self.query_neg_sim]
         # else:

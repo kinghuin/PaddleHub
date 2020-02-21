@@ -350,10 +350,7 @@ class PairwiseTask(BaseTask):
                 name="pairwise_fc")
 
             self.query_pos_sim = fluid.layers.slice(
-                query_pos_prob,
-                axes=[0, 1, 2],
-                starts=[0, 0, 0],
-                ends=[10000, 1000, 1])
+                query_pos_prob, axes=[0, 1], starts=[0, 0], ends=[1000, 1])
 
             fluid.layers.Print(self.query_pos_sim)
 
@@ -395,10 +392,7 @@ class PairwiseTask(BaseTask):
                     name="pairwise_fc")
 
                 self.query_neg_sim = fluid.layers.slice(
-                    query_neg_prob,
-                    axes=[0, 1, 2],
-                    starts=[0, 0, 0],
-                    ends=[10000, 1000, 1])
+                    query_neg_prob, axes=[0, 1], starts=[0, 0], ends=[10000, 1])
 
                 self.query_pos_infer = fluid.layers.cast(
                     fluid.layers.greater_than(
@@ -444,6 +438,7 @@ class PairwiseTask(BaseTask):
             )
             self.query_pos_sim = fluid.layers.cos_sim(query_pooled_output,
                                                       pos_pooled_output)
+            fluid.layers.Print(self.query_pos_sim)
             self.query_pos_infer = fluid.layers.cast(
                 fluid.layers.greater_than(
                     self.query_pos_sim,

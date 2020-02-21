@@ -385,7 +385,7 @@ class PairwiseTask(BaseTask):
                 fluid.layers.greater_than(
                     self.query_pos_sim,
                     fluid.layers.zeros_like(self.query_pos_sim)),
-                dtype=np.int)
+                dtype="float32")
 
             if self.is_train_phase:
                 neg_pooled_output, _ = self.module.net(
@@ -401,7 +401,7 @@ class PairwiseTask(BaseTask):
                     fluid.layers.greater_than(
                         self.query_neg_sim,
                         fluid.layers.zeros_like(self.query_neg_sim)),
-                    dtype=np.int)
+                    dtype="float32")
         # if self.is_train_phase:
         #     return [self.query_pos_sim, self.query_neg_sim]
         # else:

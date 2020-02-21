@@ -544,6 +544,8 @@ class PairwiseTask(BaseTask):
 
         if self.is_test_phase:
             feeded_var_names = self.feed_list[:-1]
+        else:
+            feeded_var_names = self.feed_list
         fluid.io.save_inference_model(
             dirname=dirname,
             executor=self.exe,

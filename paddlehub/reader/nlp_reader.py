@@ -1348,7 +1348,7 @@ class PairwiseReader(ClassifyReader):
                 batch_records.append(record)
             else:
                 yield self._pad_batch_records(batch_records, phase)
-                if phase == "dev" and self.nets_num == 2:
+                if phase != "train" and self.nets_num == 2:
                     batch_records, max_len = [record], len(record.token_ids)
                 else:
                     batch_records, max_len = [record], sum(

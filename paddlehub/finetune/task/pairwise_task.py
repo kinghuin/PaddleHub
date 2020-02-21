@@ -320,7 +320,7 @@ class PairwiseTask(BaseTask):
                 fluid.layers.greater_than(
                     self.query_pos_sim,
                     fluid.layers.zeros_like(self.query_pos_sim)),
-                dtype=np.int)
+                dtype="float32")
 
             # query_pos_prob = fluid.layers.fc(
             #     input=query_pos_pooled_output,
@@ -348,7 +348,7 @@ class PairwiseTask(BaseTask):
                     fluid.layers.greater_than(
                         self.query_neg_sim,
                         fluid.layers.zeros_like(self.query_neg_sim)),
-                    dtype=np.int)
+                    dtype="float32")
 
                 # query_neg_prob = fluid.layers.fc(
                 #     input=query_neg_pooled_output,

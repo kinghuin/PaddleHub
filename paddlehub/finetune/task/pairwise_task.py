@@ -516,8 +516,9 @@ class PairwiseTask(BaseTask):
         results = []
         for batch_state in run_states:
             batch_result = batch_state.run_results
-            for sample_infer in batch_result:
-                results.append(sample_infer)
+            results += batch_result[0].tolist()
+            # for sample_infer in batch_result:
+            #     results.append(sample_infer.tolist()[0])
         return results
 
     def save_inference_model(self,

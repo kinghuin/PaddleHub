@@ -406,7 +406,7 @@ class PairwiseTask(BaseTask):
         #     return [self.query_pos_sim, self.query_neg_sim]
         # else:
         #     return [self.query_pos_sim]
-        return self.query_pos_infer
+        return [self.query_pos_infer]
 
     def _add_label(self):
         return [fluid.layers.data(name="label", dtype="int64", shape=[1])]

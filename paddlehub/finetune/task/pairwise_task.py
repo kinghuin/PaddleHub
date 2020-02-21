@@ -405,9 +405,6 @@ class PairwiseTask(BaseTask):
         elif self.is_test_phase:
             acc = fluid.layers.accuracy(
                 input=self.outputs[0], label=self.labels[0])
-            # print(self.outputs[0])
-            # print(self.labels[0])
-            # print(acc)
             return [acc]
 
     @property
@@ -489,8 +486,10 @@ class PairwiseTask(BaseTask):
         results = []
         for batch_state in run_states:
             batch_result = batch_state.run_results
-            batch_infer = np.argmax(batch_result, axis=2)[0]
-            results += [id2label[sample_infer] for sample_infer in batch_infer]
+            for sample_infer in batch_result:
+                print(sample_infer)
+                if sample_infer > 0.5:
+                    results.append(1)
         return results
 
     def save_inference_model(self,

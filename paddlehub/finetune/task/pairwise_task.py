@@ -327,9 +327,11 @@ class PairwiseTask(BaseTask):
                     name="pos_cls_out_b",
                     initializer=fluid.initializer.Constant(0.)),
                 act="softmax")
-            self.query_pos_infer = fluid.layers.reshape(
-                x=fluid.layers.argmax(self.query_pos_sim, axis=1),
-                shape=[-1, 1])
+            self.query_pos_infer = fluid.layers.cast(
+                fluid.layers.reshape(
+                    x=fluid.layers.argmax(self.query_pos_sim, axis=1),
+                    shape=[-1, 1]),
+                dtype="float32")
 
             # self.query_pos_sim = fluid.layers.slice(
             #     query_pos_prob, axes=[0], starts=[0], ends=[10000])

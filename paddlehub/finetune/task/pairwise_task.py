@@ -541,7 +541,8 @@ class PairwiseTask(BaseTask):
         # Error Message Summary:
         # ----------------------
         # PaddleCheckError: Getting 'tensor_desc' is not supported by the type of var dev_reader_reader. at [/paddle/paddle/fluid/framework/var_desc.cc:209]
-        if self.is_predict_phase:
+
+        if self.is_test_phase:
             feeded_var_names = self.feed_list[:-1]
         fluid.io.save_inference_model(
             dirname=dirname,

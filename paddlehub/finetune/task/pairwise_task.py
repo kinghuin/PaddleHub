@@ -314,7 +314,7 @@ class PairwiseTask(BaseTask):
                 inputs["query_pos_input_mask"],
                 # inputs["query_pos_task_ids"]
             )
-
+            fluid.layers.Print(query_pos_pooled_output)
             # self.query_pos_sim = query_pos_pooled_output
 
             self.query_pos_sim = fluid.layers.fc(
@@ -326,7 +326,8 @@ class PairwiseTask(BaseTask):
                 bias_attr=fluid.ParamAttr(
                     name="pos_cls_out_b",
                     initializer=fluid.initializer.Constant(0.)),
-                act="softmax")
+                act="softmax",
+                name="pairwise_fc")
 
             # fluid.layers.Print(self.query_pos_sim)
             self.query_pos_infer = fluid.layers.cast(
@@ -353,6 +354,7 @@ class PairwiseTask(BaseTask):
                     inputs["qury_neg_input_mask"],
                     # inputs["qury_neg_task_ids"]
                 )
+                fluid.layers.Print(query_neg_pooled_output)
                 # self.query_neg_sim = query_neg_pooled_output
 
                 self.query_neg_sim = fluid.layers.fc(
@@ -365,7 +367,8 @@ class PairwiseTask(BaseTask):
                     bias_attr=fluid.ParamAttr(
                         name="neg_cls_out_b",
                         initializer=fluid.initializer.Constant(0.)),
-                    act="softmax")
+                    act="softmax",
+                    name="pairwise_fc")
 
                 # fluid.layers.Print(inputs["query_pos_input_ids"])
                 # fluid.layers.Print(inputs["query_pos_position_ids"])

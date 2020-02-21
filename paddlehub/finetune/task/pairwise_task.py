@@ -365,6 +365,13 @@ class PairwiseTask(BaseTask):
                         name="neg_cls_out_b",
                         initializer=fluid.initializer.Constant(0.)),
                     act="softmax")
+
+                fluid.layers.Print(inputs["query_input_ids"])
+                fluid.layers.Print(inputs["query_position_ids"])
+                fluid.layers.Print(inputs["query_segment_ids"])
+                fluid.layers.Print(inputs["query_input_mask"])
+                fluid.layers.Print(self.query_pos_sim)
+                fluid.layers.Print(self.query_pos_infer)
                 # self.query_neg_sim = fluid.layers.slice(
                 #     query_neg_prob, axes=[0], starts=[0], ends=[10000])
                 #

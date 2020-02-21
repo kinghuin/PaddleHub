@@ -500,19 +500,18 @@ class PairwiseTask(BaseTask):
 
         # The first key will be used as main metrics to update the best model
         scores = OrderedDict()
-        if self.is_test_phase:
-            for metric in self.metrics_choices:
-                if metric == "acc":
-                    avg_acc = acc_sum / run_examples
-                    scores["acc"] = avg_acc
-                # elif metric == "f1":
-                #     f1 = calculate_f1_np(all_infers, all_labels)
-                #     scores["f1"] = f1
-                # elif metric == "matthews":
-                #     matthews = matthews_corrcoef(all_infers, all_labels)
-                #     scores["matthews"] = matthews
-                else:
-                    raise ValueError("Not Support Metric: \"%s\"" % metric)
+        for metric in self.metrics_choices:
+            if metric == "acc":
+                avg_acc = acc_sum / run_examples
+                scores["acc"] = avg_acc
+            # elif metric == "f1":
+            #     f1 = calculate_f1_np(all_infers, all_labels)
+            #     scores["f1"] = f1
+            # elif metric == "matthews":
+            #     matthews = matthews_corrcoef(all_infers, all_labels)
+            #     scores["matthews"] = matthews
+            else:
+                raise ValueError("Not Support Metric: \"%s\"" % metric)
 
         return scores, avg_loss, run_speed
 

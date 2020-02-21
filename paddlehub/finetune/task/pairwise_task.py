@@ -315,25 +315,30 @@ class PairwiseTask(BaseTask):
                 # inputs["query_pos_task_ids"]
             )
 
-            self.query_pos_sim = query_pos_pooled_output
-            self.query_pos_infer = fluid.layers.cast(
-                fluid.layers.greater_than(
-                    self.query_pos_sim,
-                    fluid.layers.zeros_like(self.query_pos_sim)),
-                dtype="float32")
+            # self.query_pos_sim = query_pos_pooled_output
 
-            # query_pos_prob = fluid.layers.fc(
-            #     input=query_pos_pooled_output,
-            #     size=2,
-            #     param_attr=fluid.ParamAttr(
-            #         name="pos_cls_out_w",
-            #         initializer=fluid.initializer.TruncatedNormal(scale=0.02)),
-            #     bias_attr=fluid.ParamAttr(
-            #         name="pos_cls_out_b",
-            #         initializer=fluid.initializer.Constant(0.)),
-            #     act="softmax")
+            self.query_pos_sim = fluid.layers.fc(
+                input=query_pos_pooled_output,
+                size=2,
+                param_attr=fluid.ParamAttr(
+                    name="pos_cls_out_w",
+                    initializer=fluid.initializer.TruncatedNormal(scale=0.02)),
+                bias_attr=fluid.ParamAttr(
+                    name="pos_cls_out_b",
+                    initializer=fluid.initializer.Constant(0.)),
+                act="softmax")
+            self.query_pos_infer = fluid.layers.reshape(
+                x=fluid.layers.argmax(self.query_pos_sim, axis=1),
+                shape=[-1, 1])
+
             # self.query_pos_sim = fluid.layers.slice(
             #     query_pos_prob, axes=[0], starts=[0], ends=[10000])
+
+            # self.query_pos_infer = fluid.layers.cast(
+            #     fluid.layers.greater_than(
+            #         self.query_pos_sim,
+            #         fluid.layers.zeros_like(self.query_pos_sim)),
+            #     dtype="float32")
 
             if self.is_train_phase:
                 query_neg_pooled_output, _ = self.module.net(
@@ -343,29 +348,30 @@ class PairwiseTask(BaseTask):
                     inputs["qury_neg_input_mask"],
                     # inputs["qury_neg_task_ids"]
                 )
-                self.query_neg_sim = query_neg_pooled_output
-                self.query_neg_infer = fluid.layers.cast(
-                    fluid.layers.greater_than(
-                        self.query_neg_sim,
-                        fluid.layers.zeros_like(self.query_neg_sim)),
-                    dtype="float32")
+                # self.query_neg_sim = query_neg_pooled_output
+
+                self.query_neg_sim = fluid.layers.fc(
+                    input=query_neg_pooled_output,
+                    size=2,
+                    param_attr=fluid.ParamAttr(
+                        name="neg_cls_out_w",
+                        initializer=fluid.initializer.TruncatedNormal(
+                            scale=0.02)),
+                    bias_attr=fluid.ParamAttr(
+                        name="neg_cls_out_b",
+                        initializer=fluid.initializer.Constant(0.)),
+                    act="softmax")
+                # self.query_neg_sim = fluid.layers.slice(
+                #     query_neg_prob, axes=[0], starts=[0], ends=[10000])
+                #
+                # self.query_neg_infer = fluid.layers.cast(
+                #     fluid.layers.greater_than(
+                #         self.query_neg_sim,
+                #         fluid.layers.zeros_like(self.query_neg_sim)),
+                #     dtype="float32")
 
                 self.train_label = fluid.layers.cast(
                     fluid.layers.ones_like(self.query_pos_infer), dtype="int32")
-
-                # query_neg_prob = fluid.layers.fc(
-                #     input=query_neg_pooled_output,
-                #     size=2,
-                #     param_attr=fluid.ParamAttr(
-                #         name="neg_cls_out_w",
-                #         initializer=fluid.initializer.TruncatedNormal(
-                #             scale=0.02)),
-                #     bias_attr=fluid.ParamAttr(
-                #         name="neg_cls_out_b",
-                #         initializer=fluid.initializer.Constant(0.)),
-                #     act="softmax")
-                # self.query_neg_sim = fluid.layers.slice(
-                #     query_neg_prob, axes=[0], starts=[0], ends=[10000])
 
         elif self.nets_num == 3:
             query_pooled_output, _ = self.module.net(

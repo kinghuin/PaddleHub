@@ -418,11 +418,11 @@ class PairwiseTask(BaseTask):
 
                 self.train_label = fluid.layers.cast(
                     fluid.layers.ones_like(self.query_pos_infer), dtype="int64")
-        # if self.is_train_phase:
-        #     return [self.query_pos_sim, self.query_neg_sim]
-        # else:
-        #     return [self.query_pos_sim]
-        return [self.query_pos_infer]
+        if self.is_train_phase:
+            return [self.query_pos_sim, self.query_neg_sim]
+        else:
+            return [self.query_pos_sim]
+        # return [self.query_pos_infer]
 
     def _add_label(self):
         return [fluid.layers.data(name="label", dtype="int64", shape=[1])]
@@ -443,13 +443,13 @@ class PairwiseTask(BaseTask):
     def _add_metrics(self):
         if self.is_train_phase:
             # return []
-            fluid.layers.Print(self.outputs[0])
-            fluid.layers.Print(self.train_label)
+            # fluid.layers.Print(self.outputs[0])
+            # fluid.layers.Print(self.train_label)
             acc = fluid.layers.accuracy(
-                input=self.outputs[0], label=self.train_label)
+                input=self.query_pos_infer, label=self.train_label)
         elif self.is_test_phase:
             acc = fluid.layers.accuracy(
-                input=self.outputs[0], label=self.labels[0])
+                input=self.query_pos_infer, label=self.labels[0])
         else:
             raise Exception("_add_metrics: unsupport phase")
         return [acc]

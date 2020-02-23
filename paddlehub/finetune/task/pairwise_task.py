@@ -25,6 +25,7 @@ import paddle.fluid as fluid
 import paddlehub as hub
 from paddlehub.common.paddle_helper import clone_program
 from .base_task import BaseTask, RunConfig
+from paddlehub.finetune.evaluate import calculate_f1_np
 
 
 class RunEnv(object):
@@ -60,6 +61,8 @@ class PairwiseTask(BaseTask):
             config=None,
             metrics_choices="default",
     ):
+        if metrics_choices == "default":
+            metrics_choices = ["f1"]
         super(PairwiseTask, self).__init__(
             feed_list=None,
             data_reader=data_reader,
@@ -478,11 +481,11 @@ class PairwiseTask(BaseTask):
                 #     fluid.layers.ones_like(self.query_pos_infer), dtype="int64")
         # fluid.layers.Print(self.query_pos_sim,summarize=3)
 
-        if self.is_train_phase:
-            return [self.query_pos_sim, self.query_neg_sim]
-        else:
-            return [self.query_pos_sim]
-        # return [self.query_pos_infer]
+        # if self.is_train_phase:
+        #     return [self.query_pos_sim, self.query_neg_sim]
+        # else:
+        #     return [self.query_pos_sim]
+        return [self.query_pos_infer]
 
     def _add_label(self):
         return [fluid.layers.data(name="label", dtype="int64", shape=[1])]
@@ -501,20 +504,22 @@ class PairwiseTask(BaseTask):
         return loss
 
     def _add_metrics(self):
-        if self.is_train_phase:
-            return []
-            # fluid.layers.Print(self.query_pos_infer)
-            # fluid.layers.Print(self.train_label)
-            # acc = fluid.layers.accuracy(
-            #     input=self.query_pos_infer, label=self.train_label)
-        elif self.is_test_phase:
-            # fluid.layers.Print(self.query_pos_infer)
-            # fluid.layers.Print(self.labels[0])
-            acc = fluid.layers.accuracy(
-                input=self.query_pos_infer, label=self.labels[0])
-        else:
-            raise Exception("_add_metrics: unsupport phase")
-        return [acc]
+        return []
+
+    #     if self.is_train_phase:
+    #         return []
+    #         # fluid.layers.Print(self.query_pos_infer)
+    #         # fluid.layers.Print(self.train_label)
+    #         # acc = fluid.layers.accuracy(
+    #         #     input=self.query_pos_infer, label=self.train_label)
+    #     elif self.is_test_phase:
+    #         # fluid.layers.Print(self.query_pos_infer)
+    #         # fluid.layers.Print(self.labels[0])
+    #         acc = fluid.layers.accuracy(
+    #             input=self.query_pos_infer, label=self.labels[0])
+    #     else:
+    #         raise Exception("_add_metrics: unsupport phase")
+    #     return [acc]
 
     @property
     def feed_list(self):
@@ -526,14 +531,13 @@ class PairwiseTask(BaseTask):
     @property
     def fetch_list(self):
         if self.is_test_phase:
-            return [self.labels[0].name, self.query_pos_infer.name
-                    ] + [metric.name for metric in self.metrics]
+            return [self.labels[0].name, self.query_pos_infer.name]
         elif self.is_train_phase:
             return [
                 # self.train_label.name,
                 self.query_pos_sim.name,
                 self.query_neg_sim.name
-            ] + [metric.name for metric in self.metrics] + [self.loss.name]
+            ] + [self.loss.name]
         else:
             return [output.name for output in self.outputs]
 
@@ -550,8 +554,8 @@ class PairwiseTask(BaseTask):
                 loss_sum += np.mean(
                     run_state.run_results[-1]) * run_state.run_examples
             if self.is_test_phase:
-                acc_sum += np.mean(
-                    run_state.run_results[2]) * run_state.run_examples
+                # acc_sum += np.mean(
+                #     run_state.run_results[2]) * run_state.run_examples
                 np_labels = run_state.run_results[0]
                 np_infers = run_state.run_results[1]
                 # np_infers = (np_infers + 1) / 2
@@ -570,12 +574,9 @@ class PairwiseTask(BaseTask):
         scores = OrderedDict()
         if self.is_test_phase:
             for metric in self.metrics_choices:
-                if metric == "acc":
-                    avg_acc = acc_sum / run_examples
-                    scores["acc"] = avg_acc
-                # elif metric == "f1":
-                #     f1 = calculate_f1_np(all_infers, all_labels)
-                #     scores["f1"] = f1
+                if metric == "f1":
+                    f1 = calculate_f1_np(all_infers, all_labels)
+                    scores["f1"] = f1
                 # elif metric == "matthews":
                 #     matthews = matthews_corrcoef(all_infers, all_labels)
                 #     scores["matthews"] = matthews

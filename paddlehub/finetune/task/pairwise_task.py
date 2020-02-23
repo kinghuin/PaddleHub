@@ -361,7 +361,7 @@ class PairwiseTask(BaseTask):
                 fluid.layers.greater_than(
                     self.query_pos_sim,
                     fluid.layers.zeros_like(self.query_pos_sim)),
-                dtype="int32")
+                dtype="int64")
 
             # self.query_pos_infer = fluid.layers.cast(
             #     fluid.layers.greater_than(
@@ -456,7 +456,7 @@ class PairwiseTask(BaseTask):
                 fluid.layers.greater_than(
                     self.query_pos_sim,
                     fluid.layers.zeros_like(self.query_pos_sim)),
-                dtype="int32")
+                dtype="int64")
             if debug:
                 fluid.layers.Print(self.query_pos_infer, summarize=2)
 

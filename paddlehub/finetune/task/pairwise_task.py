@@ -327,8 +327,8 @@ class PairwiseTask(BaseTask):
         self.env.inputs = inputs
         return inputs
 
-    def _build_net(self):
-        debug = True
+    def _build_net(self, debug=False):
+        # debug = True
         inputs = self._add_input()
         if self.nets_num == 2:
             query_pos_pooled_output, _ = self.module.net(
@@ -361,7 +361,7 @@ class PairwiseTask(BaseTask):
                 fluid.layers.greater_than(
                     self.query_pos_sim,
                     fluid.layers.zeros_like(self.query_pos_sim)),
-                dtype="float32")
+                dtype="int32")
 
             # self.query_pos_infer = fluid.layers.cast(
             #     fluid.layers.greater_than(
@@ -456,7 +456,7 @@ class PairwiseTask(BaseTask):
                 fluid.layers.greater_than(
                     self.query_pos_sim,
                     fluid.layers.zeros_like(self.query_pos_sim)),
-                dtype="float32")
+                dtype="int32")
             if debug:
                 fluid.layers.Print(self.query_pos_infer, summarize=2)
 

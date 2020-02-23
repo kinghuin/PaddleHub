@@ -325,6 +325,7 @@ class PairwiseTask(BaseTask):
         return inputs
 
     def _build_net(self):
+        debug = True
         inputs = self._add_input()
         if self.nets_num == 2:
             query_pos_pooled_output, _ = self.module.net(
@@ -341,18 +342,18 @@ class PairwiseTask(BaseTask):
                 input=query_pos_pooled_output,
                 size=1,
                 param_attr=fluid.ParamAttr(
-                    name="pos_cls_out_w",
+                    name="cls_out_w",
                     initializer=fluid.initializer.TruncatedNormal(scale=0.02)),
                 bias_attr=fluid.ParamAttr(
-                    name="pos_cls_out_b",
+                    name="cls_out_b",
                     initializer=fluid.initializer.Constant(0.)),
                 act="tanh",
                 name="pairwise_fc")
 
             # self.query_pos_sim = fluid.layers.slice(
             #     query_pos_prob, axes=[0, 1], starts=[0, 0], ends=[1000, 1])
-
-            # fluid.layers.Print(self.query_pos_sim, summarize=3)
+            if debug:
+                fluid.layers.Print(self.query_pos_sim, summarize=2)
             self.query_pos_infer = fluid.layers.cast(
                 fluid.layers.greater_than(
                     self.query_pos_sim,
@@ -373,7 +374,8 @@ class PairwiseTask(BaseTask):
             #         x=fluid.layers.argmax(self.query_pos_sim, axis=1),
             #         shape=[-1, 1]),
             #     dtype="float32")
-            # fluid.layers.Print(self.query_pos_infer, summarize=3)
+            if debug:
+                fluid.layers.Print(self.query_pos_infer, summarize=2)
 
             # self.query_pos_infer = fluid.layers.cast(
             #     fluid.layers.greater_than(
@@ -396,11 +398,11 @@ class PairwiseTask(BaseTask):
                     input=query_neg_pooled_output,
                     size=1,
                     param_attr=fluid.ParamAttr(
-                        name="neg_cls_out_w",
+                        name="cls_out_w",
                         initializer=fluid.initializer.TruncatedNormal(
                             scale=0.02)),
                     bias_attr=fluid.ParamAttr(
-                        name="neg_cls_out_b",
+                        name="cls_out_b",
                         initializer=fluid.initializer.Constant(0.)),
                     act="tanh",
                     name="pairwise_fc")
@@ -410,9 +412,10 @@ class PairwiseTask(BaseTask):
 
                 # fluid.layers.Print(inputs["query_pos_input_ids"])
                 # fluid.layers.Print(inputs["query_pos_position_ids"])
-                # fluid.layers.Print(inputs["query_pos_segment_ids"])
+                # fluid.llsyers.Print(inputs["query_pos_segment_ids"])
                 # fluid.layers.Print(inputs["query_pos_input_mask"])
-                # fluid.layers.Print(self.query_neg_sim, summarize=3)
+                if debug:
+                    fluid.layers.Print(self.query_neg_sim, summarize=2)
                 # fluid.layers.Print(self.query_pos_infer)
 
                 #
@@ -443,14 +446,16 @@ class PairwiseTask(BaseTask):
             )
             self.query_pos_sim = fluid.layers.cos_sim(query_pooled_output,
                                                       pos_pooled_output)
-            # fluid.layers.Print(self.query_pos_sim, summarize=3)
+            if debug:
+                fluid.layers.Print(self.query_pos_sim, summarize=2)
 
             self.query_pos_infer = fluid.layers.cast(
                 fluid.layers.greater_than(
                     self.query_pos_sim,
                     fluid.layers.zeros_like(self.query_pos_sim)),
                 dtype="float32")
-            # fluid.layers.Print(self.query_pos_infer, summarize=3)
+            if debug:
+                fluid.layers.Print(self.query_pos_infer, summarize=2)
 
             if self.is_train_phase:
                 neg_pooled_output, _ = self.module.net(
@@ -467,7 +472,8 @@ class PairwiseTask(BaseTask):
                         self.query_neg_sim,
                         fluid.layers.zeros_like(self.query_neg_sim)),
                     dtype="float32")
-                # fluid.layers.Print(self.query_neg_sim, summarize=3)
+                if debug:
+                    fluid.layers.Print(self.query_neg_sim, summarize=2)
                 # self.train_label = fluid.layers.cast(
                 #     fluid.layers.ones_like(self.query_pos_infer), dtype="int64")
         # fluid.layers.Print(self.query_pos_sim,summarize=3)

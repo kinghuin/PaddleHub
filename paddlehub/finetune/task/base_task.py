@@ -863,6 +863,8 @@ class BaseTask(object):
                     fetch_list=self.fetch_list,
                     return_numpy=False)
                 fetch_result = [np.array(x) for x in fetch_result]
+            self.save_checkpoint()
+            exit()
 
             for index, result in enumerate(fetch_result):
                 step_run_state.run_results[index] = result

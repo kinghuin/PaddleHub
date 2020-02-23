@@ -504,22 +504,22 @@ class PairwiseTask(BaseTask):
         return loss
 
     def _add_metrics(self):
-        return []
-
-    #     if self.is_train_phase:
-    #         return []
-    #         # fluid.layers.Print(self.query_pos_infer)
-    #         # fluid.layers.Print(self.train_label)
-    #         # acc = fluid.layers.accuracy(
-    #         #     input=self.query_pos_infer, label=self.train_label)
-    #     elif self.is_test_phase:
-    #         # fluid.layers.Print(self.query_pos_infer)
-    #         # fluid.layers.Print(self.labels[0])
-    #         acc = fluid.layers.accuracy(
-    #             input=self.query_pos_infer, label=self.labels[0])
-    #     else:
-    #         raise Exception("_add_metrics: unsupport phase")
-    #     return [acc]
+        if self.is_train_phase:
+            return []
+            # fluid.layers.Print(self.query_pos_infer)
+            # fluid.layers.Print(self.train_label)
+            # acc = fluid.layers.accuracy(
+            #     input=self.query_pos_infer, label=self.train_label)
+        elif self.is_test_phase:
+            # fluid.layers.Print(self.query_pos_infer)
+            # fluid.layers.Print(self.labels[0])
+            # the acc is wrong when input dim=1,
+            # the layers.accuracy here used to avoid self.labels[0] being cut when use_data_parallel
+            acc = fluid.layers.accuracy(
+                input=self.query_pos_infer, label=self.labels[0])
+        else:
+            raise Exception("_add_metrics: unsupport phase")
+        return [acc]
 
     @property
     def feed_list(self):
@@ -537,7 +537,7 @@ class PairwiseTask(BaseTask):
                 # self.train_label.name,
                 self.query_pos_sim.name,
                 self.query_neg_sim.name
-            ] + [self.loss.name]
+            ] + [metric.name for metric in self.metrics] + [self.loss.name]
         else:
             return [output.name for output in self.outputs]
 

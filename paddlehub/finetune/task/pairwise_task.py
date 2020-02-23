@@ -516,7 +516,7 @@ class PairwiseTask(BaseTask):
             # the acc is wrong when input dim=1,
             # the layers.accuracy here used to avoid self.labels[0] being cut when use_data_parallel
             acc = fluid.layers.accuracy(
-                input=self.query_pos_infer, label=self.labels[0])
+                input=self.query_pos_sim, label=self.labels[0])
         else:
             raise Exception("_add_metrics: unsupport phase")
         return [acc]

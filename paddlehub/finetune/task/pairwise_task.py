@@ -357,11 +357,11 @@ class PairwiseTask(BaseTask):
             #     query_pos_prob, axes=[0, 1], starts=[0, 0], ends=[1000, 1])
             if debug:
                 fluid.layers.Print(self.query_pos_sim, summarize=2)
-            self.query_pos_infer = fluid.layers.cast(
-                fluid.layers.greater_than(
-                    self.query_pos_sim,
-                    fluid.layers.zeros_like(self.query_pos_sim)),
-                dtype="int64")
+            # self.query_pos_infer = fluid.layers.cast(
+            #     fluid.layers.greater_than(
+            #         self.query_pos_sim,
+            #         fluid.layers.zeros_like(self.query_pos_sim)),
+            #     dtype="int64")
 
             # self.query_pos_infer = fluid.layers.cast(
             #     fluid.layers.greater_than(
@@ -377,8 +377,8 @@ class PairwiseTask(BaseTask):
             #         x=fluid.layers.argmax(self.query_pos_sim, axis=1),
             #         shape=[-1, 1]),
             #     dtype="float32")
-            if debug:
-                fluid.layers.Print(self.query_pos_infer, summarize=2)
+            # if debug:
+            #     fluid.layers.Print(self.query_pos_infer, summarize=2)
 
             # self.query_pos_infer = fluid.layers.cast(
             #     fluid.layers.greater_than(
@@ -452,13 +452,13 @@ class PairwiseTask(BaseTask):
             if debug:
                 fluid.layers.Print(self.query_pos_sim, summarize=2)
 
-            self.query_pos_infer = fluid.layers.cast(
-                fluid.layers.greater_than(
-                    self.query_pos_sim,
-                    fluid.layers.zeros_like(self.query_pos_sim)),
-                dtype="int64")
-            if debug:
-                fluid.layers.Print(self.query_pos_infer, summarize=2)
+            # self.query_pos_infer = fluid.layers.cast(
+            #     fluid.layers.greater_than(
+            #         self.query_pos_sim,
+            #         fluid.layers.zeros_like(self.query_pos_sim)),
+            #     dtype="int64")
+            # if debug:
+            #     fluid.layers.Print(self.query_pos_infer, summarize=2)
 
             if self.is_train_phase:
                 neg_pooled_output, _ = self.module.net(
@@ -470,22 +470,22 @@ class PairwiseTask(BaseTask):
                 )
                 self.query_neg_sim = fluid.layers.cos_sim(
                     query_pooled_output, neg_pooled_output)
-                self.query_neg_infer = fluid.layers.cast(
-                    fluid.layers.greater_than(
-                        self.query_neg_sim,
-                        fluid.layers.zeros_like(self.query_neg_sim)),
-                    dtype="float32")
+                # self.query_neg_infer = fluid.layers.cast(
+                #     fluid.layers.greater_than(
+                #         self.query_neg_sim,
+                #         fluid.layers.zeros_like(self.query_neg_sim)),
+                #     dtype="float32")
                 if debug:
                     fluid.layers.Print(self.query_neg_sim, summarize=2)
                 # self.train_label = fluid.layers.cast(
                 #     fluid.layers.ones_like(self.query_pos_infer), dtype="int64")
         # fluid.layers.Print(self.query_pos_sim,summarize=3)
 
-        # if self.is_train_phase:
-        #     return [self.query_pos_sim, self.query_neg_sim]
-        # else:
-        #     return [self.query_pos_sim]
-        return [self.query_pos_infer]
+        if self.is_train_phase:
+            return [self.query_pos_sim, self.query_neg_sim]
+        else:
+            return [self.query_pos_sim]
+        # return [self.query_pos_infer]
 
     def _add_label(self):
         return [fluid.layers.data(name="label", dtype="int64", shape=[1])]
@@ -531,7 +531,10 @@ class PairwiseTask(BaseTask):
     @property
     def fetch_list(self):
         if self.is_test_phase:
-            return [self.labels[0].name, self.query_pos_infer.name]
+            return [
+                self.query_pos_sim.name,
+                self.labels[0].name,
+            ]
         elif self.is_train_phase:
             return [
                 # self.train_label.name,
@@ -550,18 +553,19 @@ class PairwiseTask(BaseTask):
         for run_state in run_states:
             run_examples += run_state.run_examples
             run_step += run_state.run_step
+            np_infers = run_state.run_results[0]
             if self.is_train_phase:
                 loss_sum += np.mean(
                     run_state.run_results[-1]) * run_state.run_examples
             if self.is_test_phase:
+                np_labels = run_state.run_results[1]
                 # acc_sum += np.mean(
                 #     run_state.run_results[2]) * run_state.run_examples
-                np_labels = run_state.run_results[0]
-                np_infers = run_state.run_results[1]
+
                 # np_infers = (np_infers + 1) / 2
                 # the following 2 lines are suitable for both 2 nets and 3 nets?
-                # np_infers[np_infers > 0] = 1
-                # np_infers[np_infers <= 0] = 0
+                np_infers[np_infers > 0.958] = 1
+                np_infers[np_infers <= 0.958] = 0
                 all_labels = np.hstack((all_labels, np_labels.reshape([-1])))
                 all_infers = np.hstack((all_infers, np_infers.reshape([-1])))
 

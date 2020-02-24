@@ -593,7 +593,7 @@ class PairwiseTask(BaseTask):
         if self.is_test_phase:
             for metric in self.metrics_choices:
                 if metric == "f1":
-                    p, r, f1 = calculate_f1_np(all_infers, all_labels)
+                    p, r, f1 = self.calculate_p_r_f1_np(all_infers, all_labels)
                     scores["p"] = p
                     scores["r"] = r
                     scores["f1"] = f1

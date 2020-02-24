@@ -544,7 +544,21 @@ class PairwiseTask(BaseTask):
         else:
             return [output.name for output in self.outputs]
 
+    def calculate_p_r_f1_np(self, preds, labels):
+        preds = np.array(preds)
+        labels = np.array(labels)
+
+        tp = np.sum((labels == 1) & (preds == 1))
+        tn = np.sum((labels == 0) & (preds == 0))
+        fp = np.sum((labels == 0) & (preds == 1))
+        fn = np.sum((labels == 1) & (preds == 0))
+        p = tp / (tp + fp) if (tp + fp) else 0
+        r = tp / (tp + fn) if (tp + fn) else 0
+        f1 = (2 * p * r) / (p + r) if p + r else 0
+        return p, r, f1
+
     def _calculate_metrics(self, run_states):
+
         loss_sum = acc_sum = run_examples = 0
         run_step = run_time_used = 0
         all_labels = np.array([])
@@ -579,7 +593,9 @@ class PairwiseTask(BaseTask):
         if self.is_test_phase:
             for metric in self.metrics_choices:
                 if metric == "f1":
-                    f1 = calculate_f1_np(all_infers, all_labels)
+                    p, r, f1 = calculate_f1_np(all_infers, all_labels)
+                    scores["p"] = p
+                    scores["r"] = r
                     scores["f1"] = f1
                 # elif metric == "matthews":
                 #     matthews = matthews_corrcoef(all_infers, all_labels)

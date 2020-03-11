@@ -202,7 +202,7 @@ class ServingCommand(BaseCommand):
                 module=key,
                 version=init_args.get("version", "0.0.0")).start()
 
-            if "dir" not in init_args:
+            if "directory" not in init_args:
                 init_args.update({"name": key})
             m = hub.Module(**init_args)
             method_name = m.serving_func_name
@@ -313,6 +313,11 @@ class ServingCommand(BaseCommand):
                 with open(self.args.config, "r") as fp:
                     self.args.config = json.load(fp)
                 self.modules_info = self.args.config["modules_info"]
+                if isinstance(self.module_info, list):
+                    raise RuntimeError(
+                        "This configuration method is outdated, see 'https://github.com/PaddlePaddle/PaddleHub/blob/release/v1.6/docs/tutorial/serving.md' for more details."
+                    )
+                    exit(1)
             else:
                 raise RuntimeError("{} not exists.".format(self.args.config))
                 exit(1)
@@ -413,11 +418,11 @@ class ServingCommand(BaseCommand):
         except:
             ServingCommand.show_help()
             return False
-        self.link_module_info()
         if self.args.sub_command == "start":
             if self.args.bert_service == "bert_service":
                 ServingCommand.start_bert_serving(self.args)
             elif self.args.bert_service is None:
+                self.link_module_info()
                 self.start_serving()
             else:
                 ServingCommand.show_help()

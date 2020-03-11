@@ -25,7 +25,7 @@ import paddle.fluid as fluid
 from paddlehub import logger
 
 
-class _BERTEmbeddingTask(hub.BaseTask):
+class _TransformerEmbeddingTask(hub.BaseTask):
     def __init__(self,
                  pooled_feature,
                  seq_feature,
@@ -33,7 +33,7 @@ class _BERTEmbeddingTask(hub.BaseTask):
                  data_reader,
                  config=None):
         main_program = pooled_feature.block.program
-        super(_BERTEmbeddingTask, self).__init__(
+        super(_TransformerEmbeddingTask, self).__init__(
             main_program=main_program,
             data_reader=data_reader,
             feed_list=feed_list,
@@ -57,7 +57,7 @@ class _BERTEmbeddingTask(hub.BaseTask):
         return results
 
 
-class BERTModule(hub.Module):
+class TransformerModule(hub.Module):
     def _initialize(self):
         """
         Must override this method.
@@ -220,7 +220,7 @@ class BERTModule(hub.Module):
                 batch_size=batch_size)
 
             self.emb_job = {}
-            self.emb_job["task"] = _BERTEmbeddingTask(
+            self.emb_job["task"] = _TransformerEmbeddingTask(
                 pooled_feature=pooled_feature,
                 seq_feature=seq_feature,
                 feed_list=feed_list,

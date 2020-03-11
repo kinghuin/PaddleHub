@@ -23,6 +23,7 @@ import re
 import paddlehub as hub
 import paddle.fluid as fluid
 from paddlehub import logger
+from paddlehub.common import paddle_helper
 
 
 class _TransformerEmbeddingTask(hub.BaseTask):
@@ -157,10 +158,14 @@ class TransformerModule(hub.Module):
 
         place = fluid.CPUPlace()
         exe = fluid.Executor(place)
-        exe.run(startup_program)
+
+        prefix = "@HUB_%s@" % self.name.replace(
+            "L_24_H_1024_A_16", "L-24_H-1024_A-16").replace(
+                "L_12_H_768_A_12", "L-12_H-768_A-12")
+        paddle_helper.add_vars_prefix(program=module_program, prefix=prefix)
 
         self.init_pretraining_params(
-            exe, self.params_path, main_program=startup_program)
+            exe, self.params_path, main_program=module_program)
 
         self.params_layer = {}
         for param in module_program.global_block().iter_parameters():

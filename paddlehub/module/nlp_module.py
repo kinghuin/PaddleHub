@@ -159,12 +159,22 @@ class TransformerModule(hub.Module):
         place = fluid.CPUPlace()
         exe = fluid.Executor(place)
 
-        prefix = "@HUB_%s@" % self.name
+        # To be compatible with the module v1
+        if self.name not in [
+                "roberta_wwm_ext_chinese_L-12_H-768_A-12_distillation",
+                "roberta_wwm_ext_chinese_L-24_H-1024_A-16_distillation"
+        ]:
+            if self.name == "ernie_tiny":
+                prefix = "@HUB_ernie-tiny@"
+            elif self.name == "ernie":
+                prefix = "@HUB_ernie-stable@"
+            else:
+                prefix = "@HUB_%s@" % self.name
 
-        vars = filter(lambda var: "tmp" not in var,
-                      list(module_program.global_block().vars.keys())[4:])
-        paddle_helper.add_vars_prefix(
-            program=module_program, prefix=prefix, vars=vars)
+            vars = filter(lambda var: "tmp" not in var,
+                          list(module_program.global_block().vars.keys())[4:])
+            paddle_helper.add_vars_prefix(
+                program=module_program, prefix=prefix, vars=vars)
 
         self.init_pretraining_params(
             exe, self.params_path, main_program=module_program)

@@ -168,6 +168,8 @@ class TransformerModule(hub.Module):
                 prefix = "@HUB_ernie-tiny@"
             elif self.name == "ernie":
                 prefix = "@HUB_ernie-stable@"
+            elif self.name == "bert_wwm_ext_chinese_L-12_H-768_A-12":
+                prefix = "@HUB_bert_wwm_ext_chinese_L-12_H-768_A-12_wwm_ext@"
             else:
                 prefix = "@HUB_%s@" % self.name
 

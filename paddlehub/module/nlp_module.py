@@ -162,7 +162,8 @@ class TransformerModule(hub.Module):
         # To be compatible with the module v1
         if self.name not in [
                 "roberta_wwm_ext_chinese_L-12_H-768_A-12_distillation",
-                "roberta_wwm_ext_chinese_L-24_H-1024_A-16_distillation"
+                "roberta_wwm_ext_chinese_L-24_H-1024_A-16_distillation",
+                "bert_multi_uncased_L_12_H_768_A_12"
         ]:
             if self.name == "ernie_tiny":
                 prefix = "@HUB_ernie-tiny@"

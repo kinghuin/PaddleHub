@@ -163,7 +163,8 @@ class TransformerModule(hub.Module):
         if self.name not in [
                 "roberta_wwm_ext_chinese_L-12_H-768_A-12_distillation",
                 "roberta_wwm_ext_chinese_L-24_H-1024_A-16_distillation",
-                "bert_multi_uncased_L_12_H_768_A_12"
+                "bert_multi_uncased_L-12_H-768_A-12",
+                "bert_cased_L-24_H-1024_A-16"
         ]:
             if self.name == "ernie_tiny":
                 prefix = "@HUB_ernie-tiny@"

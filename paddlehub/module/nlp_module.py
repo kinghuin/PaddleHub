@@ -159,10 +159,12 @@ class TransformerModule(hub.Module):
         place = fluid.CPUPlace()
         exe = fluid.Executor(place)
 
-        prefix = "@HUB_%s@" % self.name.replace(
-            "L_24_H_1024_A_16", "L-24_H-1024_A-16").replace(
-                "L_12_H_768_A_12", "L-12_H-768_A-12")
-        paddle_helper.add_vars_prefix(program=module_program, prefix=prefix)
+        prefix = "@HUB_%s@" % self.name
+
+        vars = filter(lambda var: "tmp" not in var,
+                      list(module_program.global_block().vars.keys())[4:])
+        paddle_helper.add_vars_prefix(
+            program=module_program, prefix=prefix, vars=vars)
 
         self.init_pretraining_params(
             exe, self.params_path, main_program=module_program)

@@ -999,7 +999,7 @@ class BaseTask(object):
         """
         if not version_compare(paddle.__version__, "1.6.2") and accelerate_mode:
             logger.warning(
-                "predict accelerate mode has been closed as it does not support Paddle < 1.6.2. Please update PaddlePaddle to support it."
+                "Fail to open predict accelerate mode as it does not support paddle < 1.6.2. Please update PaddlePaddle."
             )
             accelerate_mode = False
         self.accelerate_mode = accelerate_mode

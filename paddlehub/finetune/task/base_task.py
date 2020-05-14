@@ -32,7 +32,7 @@ else:
 import numpy as np
 import paddle
 import paddle.fluid as fluid
-from tb_paddle import SummaryWriter
+from visualdl import LogWriter
 
 import paddlehub as hub
 from paddlehub.common.paddle_helper import dtype_map, clone_program
@@ -327,7 +327,7 @@ class BaseTask(object):
         self._phases = []
         self._envs = {}
         self._predict_data = None
-        self._tb_writer = None
+        self._vdl_writer = None
 
         # event hooks
         self._hooks = TaskHooks()
@@ -343,10 +343,6 @@ class BaseTask(object):
 
         # set default phase
         self.enter_phase("train")
-
-    @property
-    def base_main_program(self):
-        return self._base_main_program
 
     @contextlib.contextmanager
     def phase_guard(self, phase):
@@ -397,7 +393,7 @@ class BaseTask(object):
         self._build_env_start_event()
         self.env.is_inititalized = True
         self.env.main_program = clone_program(
-            self.base_main_program, for_test=False)
+            self._base_main_program, for_test=False)
 
         self.env.startup_program = fluid.Program()
         with fluid.program_guard(self.env.main_program,
@@ -410,7 +406,6 @@ class BaseTask(object):
                     self.env.metrics = self._add_metrics()
 
         if self.is_predict_phase or self.is_test_phase:
-            # Todo: paddle.fluid.core_avx.EnforceNotMet: Getting 'tensor_desc' is not supported by the type of var kCUDNNFwdAlgoCache. at
             self.env.main_program = clone_program(
                 self.env.main_program, for_test=True)
             hub.common.paddle_helper.set_op_attr(
@@ -607,16 +602,16 @@ class BaseTask(object):
         return [vars[varname] for varname in self.fetch_list]
 
     @property
-    def tb_writer(self):
+    def vdl_writer(self):
         """
-        get tb_writer for visualization.
+        get vdl_writer for visualization.
         """
         if not os.path.exists(self.config.checkpoint_dir):
             mkdir(self.config.checkpoint_dir)
         tb_log_dir = os.path.join(self.config.checkpoint_dir, "visualization")
-        if not self._tb_writer:
-            self._tb_writer = SummaryWriter(tb_log_dir)
-        return self._tb_writer
+        if not self._vdl_writer:
+            self._vdl_writer = LogWriter(tb_log_dir)
+        return self._vdl_writer
 
     def create_event_function(self, hook_type):
         """
@@ -723,18 +718,19 @@ class BaseTask(object):
         """
         eval_scores, eval_loss, run_speed = self._calculate_metrics(run_states)
         if 'train' in self._envs:
-            self.tb_writer.add_scalar(
+            self.vdl_writer.add_scalar(
                 tag="Loss_{}".format(self.phase),
-                scalar_value=eval_loss,
-                global_step=self._envs['train'].current_step)
+                value=eval_loss,
+                step=self._envs['train'].current_step)
 
         log_scores = ""
         for metric in eval_scores:
             if 'train' in self._envs:
-                self.tb_writer.add_scalar(
+                self.vdl_writer.add_scalar(
                     tag="{}_{}".format(metric, self.phase),
-                    scalar_value=eval_scores[metric],
-                    global_step=self._envs['train'].current_step)
+                    value=eval_scores[metric],
+                    step=self._envs['train'].current_step)
+
             log_scores += "%s=%.5f " % (metric, eval_scores[metric])
         logger.eval(
             "[%s dataset evaluation result] loss=%.5f %s[step/sec: %.2f]" %
@@ -766,16 +762,16 @@ class BaseTask(object):
             run_states (object): the results in train phase
         """
         scores, avg_loss, run_speed = self._calculate_metrics(run_states)
-        self.tb_writer.add_scalar(
+        self.vdl_writer.add_scalar(
             tag="Loss_{}".format(self.phase),
-            scalar_value=avg_loss,
-            global_step=self._envs['train'].current_step)
+            value=avg_loss,
+            step=self._envs['train'].current_step)
         log_scores = ""
         for metric in scores:
-            self.tb_writer.add_scalar(
+            self.vdl_writer.add_scalar(
                 tag="{}_{}".format(metric, self.phase),
-                scalar_value=scores[metric],
-                global_step=self._envs['train'].current_step)
+                value=scores[metric],
+                step=self._envs['train'].current_step)
             log_scores += "%s=%.5f " % (metric, scores[metric])
         logger.train("step %d / %d: loss=%.5f %s[step/sec: %.2f]" %
                      (self.current_step, self.max_train_steps, avg_loss,
@@ -1002,11 +998,6 @@ class BaseTask(object):
         Returns:
             RunState: the running result of predict phase
         """
-        if not version_compare(paddle.__version__, "1.6.2") and accelerate_mode:
-            logger.warning(
-                "Fail to open predict accelerate mode as it does not support paddle < 1.6.2. Please update PaddlePaddle."
-            )
-            accelerate_mode = False
         self.accelerate_mode = accelerate_mode
 
         with self.phase_guard(phase="predict"):
@@ -1063,10 +1054,8 @@ class BaseTask(object):
                     capacity=64,
                     use_double_buffer=True,
                     iterable=True)
-                data_reader = data_loader.set_sample_list_generator(
-                    self.reader, self.places)
-                # data_reader = data_loader.set_batch_generator(
-                #     self.reader, places=self.places)
+                data_reader = data_loader.set_batch_generator(
+                    self.reader, places=self.places)
             else:
                 data_feeder = fluid.DataFeeder(
                     feed_list=self.feed_list, place=self.place)
@@ -1083,28 +1072,12 @@ class BaseTask(object):
                 step_run_state.run_step = 1
                 num_batch_examples = len(batch)
 
-                if self.return_numpy == 2:
-                    fetch_result = self.exe.run(
-                        self.main_program_to_be_run,
-                        feed=batch,
-                        fetch_list=self.fetch_list,
-                        return_numpy=False)
-                    # fetch_result = [x if isinstance(x,fluid.LoDTensor) else np.array(x) for x in fetch_result]
-                    fetch_result = [
-                        x if hasattr(x, 'recursive_sequence_lengths') else
-                        np.array(x) for x in fetch_result
-                    ]
-                elif self.return_numpy:
-                    fetch_result = self.exe.run(
-                        self.main_program_to_be_run,
-                        feed=batch,
-                        fetch_list=self.fetch_list)
-                else:
-                    fetch_result = self.exe.run(
-                        self.main_program_to_be_run,
-                        feed=batch,
-                        fetch_list=self.fetch_list,
-                        return_numpy=False)
+                fetch_result = self.exe.run(
+                    self.main_program_to_be_run,
+                    feed=batch,
+                    fetch_list=self.fetch_list,
+                    return_numpy=self.return_numpy)
+                if not self.return_numpy:
                     fetch_result = [np.array(x) for x in fetch_result]
 
                 for index, result in enumerate(fetch_result):

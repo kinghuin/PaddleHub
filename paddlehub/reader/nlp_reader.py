@@ -47,12 +47,8 @@ class BaseNLPReader(BaseReader):
                  in_tokens=False):
         super(BaseNLPReader, self).__init__(dataset, random_seed)
         self.max_seq_len = max_seq_len
-        if sp_model_path and word_dict_path:
-            self.tokenizer = tokenization.WSSPTokenizer(
-                vocab_path, sp_model_path, word_dict_path, ws=True, lower=True)
-        else:
-            self.tokenizer = tokenization.FullTokenizer(
-                vocab_file=vocab_path, do_lower_case=do_lower_case)
+        self.tokenizer = tokenization.FullTokenizer(
+            vocab_file=vocab_path, do_lower_case=do_lower_case)
         self.vocab = self.tokenizer.vocab
         self.pad_id = self.vocab["[PAD]"]
         self.cls_id = self.vocab["[CLS]"]

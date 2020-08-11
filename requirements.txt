@@ -6,7 +6,6 @@ flask >= 1.1.0
 flake8
 visualdl >= 2.0.0b
 cma >= 2.7.0
-sentencepiece
 colorlog
 tqdm
 nltk

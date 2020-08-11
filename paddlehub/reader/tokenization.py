@@ -22,7 +22,6 @@ import collections
 import io
 import unicodedata
 import six
-import sentencepiece as spm
 import pickle
 
 
@@ -139,59 +138,6 @@ class FullTokenizer(object):
     def convert_ids_to_tokens(self, ids):
         return convert_by_vocab(self.inv_vocab, ids)
 
-
-class WSSPTokenizer(object):
-    def __init__(self, vocab_file, sp_model_dir, word_dict, ws=True,
-                 lower=True):
-        self.vocab = load_vocab(vocab_file)
-        self.inv_vocab = {v: k for k, v in self.vocab.items()}
-        self.ws = ws
-        self.lower = lower
-        self.dict = pickle.load(open(word_dict, 'rb'))
-        self.sp_model = spm.SentencePieceProcessor()
-        self.window_size = 5
-        self.sp_model.Load(sp_model_dir)
-
-    def cut(self, chars):
-        words = []
-        idx = 0
-        while idx < len(chars):
-            matched = False
-            for i in range(self.window_size, 0, -1):
-                cand = chars[idx:idx + i]
-                if cand in self.dict:
-                    words.append(cand)
-                    matched = True
-                    break
-            if not matched:
-                i = 1
-                words.append(chars[idx])
-            idx += i
-        return words
-
-    def tokenize(self, text, unk_token="[UNK]"):
-        text = convert_to_unicode(text)
-        if self.ws:
-            text = [s for s in self.cut(text) if s != ' ']
-        else:
-            text = text.split(' ')
-        if self.lower:
-            text = [s.lower() for s in text]
-        text = ' '.join(text)
-        tokens = self.sp_model.EncodeAsPieces(text)
-        in_vocab_tokens = []
-        for token in tokens:
-            if token in self.vocab:
-                in_vocab_tokens.append(token)
-            else:
-                in_vocab_tokens.append(unk_token)
-        return in_vocab_tokens
-
-    def convert_tokens_to_ids(self, tokens):
-        return convert_by_vocab(self.vocab, tokens)
-
-    def convert_ids_to_tokens(self, ids):
-        return convert_by_vocab(self.inv_vocab, ids)
 
 
 class BasicTokenizer(object):

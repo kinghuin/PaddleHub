@@ -59,5 +59,5 @@ from .autofinetune.evaluator import report_final_result
 
 from .module.nlp_module import NLPPredictionModule, TransformerModule
 
-from .tokenizer.bert_tokenizer import BertTokenizer, ErnieTinyTokenizer
+from .tokenizer.bert_tokenizer import BertTokenizer
 from .tokenizer.tokenizer import CustomTokenizer
